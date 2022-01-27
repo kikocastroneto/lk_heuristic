@@ -32,9 +32,12 @@ def get_interactive_inputs():
     # loop to collect files in selected directory
     print("# Step 1 - TSP Instance Selection #")
     print(f"*TSP instances avaliable in '{os.path.basename(samples_dir)}' directory:")
-    for i, f in enumerate(os.listdir(samples_dir)):
-        tsp_files.append(os.path.join(samples_dir, f))
-        print(f"[{i}] - {f}")
+    f_index = 0
+    for f in os.listdir(samples_dir):
+        if f.lower().endswith(".tsp"):
+            tsp_files.append(os.path.join(samples_dir, f))
+            print(f"[{f_index}] - {f}")
+            f_index += 1
 
     # loop to get user selection
     tsp_selection = "-1"
