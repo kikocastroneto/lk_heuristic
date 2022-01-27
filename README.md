@@ -97,7 +97,7 @@ Example:
 
 ## Plotting
 
-The main output from the improvement process is the .tsp file with nodes sorted as in the optimal tour found at improvement procedure. User can use this file and parse it to his preferred visualization tool. Although, a simple tool was designed to display 2D and 3D plots using Plotly.
+The main output from the improvement process is the .tsp file with nodes sorted as in the optimal tour found at improvement procedure. User can use this file and parse it to his preferred visualization tool. Although, a simple tool was designed to display 2D and 3D plots using [Plotly][plotly].
 
 In plot_funcs.py, there are two functions to plot either 2D or 3D graphs using as input the .tsp file. After running those functions, a html file is exported at 'plots' folder, which can be viewed using the browser.
 
@@ -113,3 +113,4 @@ Python: 3.7.0 64bit
 [lkh]: http://webhotel4.ruc.dk/~keld/research/LKH/
 [arthur]: https://arthur.maheo.net/implementing-lin-kernighan-in-python/
 [tsplib]: http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/
+[plotly]: https://plotly.com/python/
