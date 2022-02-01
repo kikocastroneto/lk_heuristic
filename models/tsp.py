@@ -7,6 +7,7 @@ from models.edge import Edge
 from models.tour import Tour
 from utils.timer_funcs import improve_timer_decorator
 
+
 # create the logger for the module
 logger = logging.getLogger(__name__)
 
@@ -20,9 +21,9 @@ class Tsp:
     # this is required when computing the gain in "simmetric" tours, to avoid incorrect calculations when using just "> 0 "
     gain_precision = 0.01
 
-    def __init__(self, nodes, cost_function, shuffle=False):
+    def __init__(self, nodes, cost_function, shuffle=False, max_neighbors=5):
         """
-        The TSP input is a list of nodes which will be used as input to build a tour. Tour nodes can be randomized using shuffle parameter. The cost function is the function used to compute the cost matrix. 
+        The TSP input is a list of nodes which will be used as input to build a tour and a cost function to build the cost matrix.
 
         :param nodes: the list of nodes for the tsp
         :type nodes: list
@@ -30,6 +31,8 @@ class Tsp:
         :type cost_function: function
         :param shuffle: a boolean value indicating if nodes shall be shuffled before building the tour
         :type shuffle: boolean
+        :param max_neighbors: the max number of closest neighbors to use in lookahead search 
+        :type max_neighbors: int
         """
 
         # initialize nodes
@@ -64,6 +67,11 @@ class Tsp:
         # the set of solutions will help to avoid repeated tours analysis
         # it is a hash of a tuple of node sequences
         self.solutions = set()
+
+        # init a dict of closest neighbors
+        # each node will have a maximum number of closest neighbors defined by the cost between them
+        self.closest_neighbors = {}
+        self.set_closest_neighboors(max_neighbors=max_neighbors)
 
     def set_cost_matrix(self, cost_func):
         """
@@ -114,40 +122,52 @@ class Tsp:
             # remove last stack
             self.swap_stack.pop()
 
-    def get_closest_neighboors(self, t1, t2, max_neighboors=5):
+    def set_closest_neighboors(self, max_neighbors=5):
         """
-        Get the closest neighbors of t2 by computing the gain = c(x2) - c(y1) (the difference between the cost of the broken edge x2 and joined edge y1). x2 = (t3,t4) and y1 = (t2,t3). The use of t1 is required to check if the future swap to be made is valid, so that only valid swaps are considered and returned by the function. The procedure of this function is the refinement "Lookahead" defined at 1973 LK paper.
+        Get the closest neighbors of each tsp node using the cost_matrix values. The return will be a dict of each node as key and the value is a list of closest nodes. The number of values to be returned inside the list is defined by the max_neighboors variable, which at LK paper, is suggested to be 5 (but this will depend on the size of the problem).
 
-        The return will be a list of tuple in the format: ((t3,t4), gain), where the first element is a tuple with nodes of broken edge and gain is the computed gain value (c(x2) - c(y1)). The amount of values to be returned is defined by the max_neighboors variable, which at LK paper, is suggested to be 5.
+        This function, combined with the get_best_neighbors, is the lookahead refinement from LK paper, where the best swaps from the closest neighbors of a node direct the search and speed up performance.
 
-        :param t1: the tail node of the edge to be broken 
-        :type t1: Node2D
-        :param t2: the head node of the edge to be broken
-        :type t2: Node2D
         :param max_neighboors: the maximum number of closest neighbors to collect
         :type max_neighboors: int
-        :return: returns a list of tuple with nodes (t3,t4) and the gain value
+        :return: returns a dict mapping each node with its closest neighbors
         :rtype: list
         """
-        # create a dictionary mapping (t3,t4) with respective gain relative to t2
-        # gain = c(t3,t4) - c(t2,t3)
-        closest_neighboors = {}
 
-        # loop through each possible t3
-        for t3 in self.tour.nodes:
+        # loop through each node
+        for node1 in self.tour.nodes:
 
-            # t3 can't be t2 for a valid swap
-            if t3 != t2:
+            # get all edge costs for each possible neighbor
+            neighbors = [(node2, self.cost_matrix[(node1.id, node2.id)]) for node2 in self.tour.nodes if node2 != node1]
 
-                # compute the gain for the valid swap
-                # in a valid swap t4 is either t3.pred or t3.succ, but not both, which is checked by the is_swap_valid function
-                if (self.tour.is_swap_valid(t1, t2, t3, t3.pred)):
-                    closest_neighboors[(t3, t3.pred)] = self.cost_matrix[(t3.id, t3.pred.id)] - self.cost_matrix[(t2.id, t3.id)]
-                if (self.tour.is_swap_valid(t1, t2, t3, t3.succ)):
-                    closest_neighboors[(t3, t3.succ)] = self.cost_matrix[(t3.id, t3.succ.id)] - self.cost_matrix[(t2.id, t3.id)]
+            # sort the neighbors based on the cost value and get the smallest ones
+            neighbors_min = sorted(neighbors, key=lambda x: x[1])[:max_neighbors]
+
+            # populate neighbor list with the best neighbors
+            self.closest_neighbors[node1] = [neighbor[0] for neighbor in neighbors_min]
+
+    def get_best_neighbors(self, t2):
+        """
+        Get the best tuple of nodes (t3,t4) by computing the gain of swapping the closest neighbors of t2 (i.e, swapping (t3,t4) with (t2,t3)). This is the lookahead refinement where the nodes to be selected for executing the swap are sorted/selected by best gain.
+
+        :param t2: the t2 node from where best neighbors shall be found
+        :type t2: Node
+        :return: a dict with keys (t3,t4) and value is the gain
+        :rtype: dict
+        """
+
+        # a dict storing the best neighbors from t2
+        best_neighbors = {}
+
+        # loop through each closest neighbor of t2 (since looping throgh every neighbor would be time consuming)
+        for t3 in self.closest_neighbors[t2]:
+            # loop through each possible t4
+            for t4 in (t3.pred, t3.succ):
+                # compute the gain
+                best_neighbors[(t3, t4)] = self.cost_matrix[(t3.id, t4.id)] - self.cost_matrix[t2.id, t3.id]
 
         # returns a list of (key,value) pairs of the max values of gain.
-        return sorted(closest_neighboors.items(), key=lambda x: x[1], reverse=True)[:max_neighboors]
+        return sorted(best_neighbors.items(), key=lambda x: x[1], reverse=True)
 
     def lk_select_broken_edge(self, gain, t1, t2, t3, t4, broken_edges, joined_edges):
         """
@@ -259,28 +279,25 @@ class Tsp:
         broken_cost = self.cost_matrix[(t4.id, t1.id)]
 
         # loop through the closest possible node from t4 instead of looping through all nodes
-        for (node, neighbor_node), _ in self.get_closest_neighboors(t1, t4):
+        for (node, neighbor_node), _ in self.get_best_neighbors(t4):
 
-            # node must be different from t4 (since t4 is the tail of the new edge)
-            if (node != t4):
+            # create the edge and get the edge cost
+            joined_edge = Edge(t4, node)
+            joined_cost = self.cost_matrix[(t4.id, node.id)]
 
-                # create the edge and get the edge cost
-                joined_edge = Edge(t4, node)
-                joined_cost = self.cost_matrix[(t4.id, node.id)]
+            # compute the new gain value
+            curr_gain = gain + (broken_cost - joined_cost)
 
-                # compute the new gain value
-                curr_gain = gain + (broken_cost - joined_cost)
+            # check if edge to be added is not in broken edges (disjoint criteria)
+            # check if edge to be added is not already inside the tour
+            # check if gain is positive
+            if joined_edge not in broken_edges and joined_edge not in self.tour.edges and curr_gain > self.gain_precision:
 
-                # check if edge to be added is not in broken edges (disjoint criteria)
-                # check if edge to be added is not already inside the tour
-                # check if gain is positive
-                if joined_edge not in broken_edges and joined_edge not in self.tour.edges and curr_gain > self.gain_precision:
+                # add the edge to joined edges
+                joined_edges.add(joined_edge)
 
-                    # add the edge to joined edges
-                    joined_edges.add(joined_edge)
-
-                    # try to select an edge to be broken
-                    return self.lk_select_broken_edge(curr_gain, t1, t4, node, neighbor_node, broken_edges, joined_edges)
+                # try to select an edge to be broken
+                return self.lk_select_broken_edge(curr_gain, t1, t4, node, neighbor_node, broken_edges, joined_edges)
 
         # boolean value indicating no improvement was found
         return False
@@ -301,8 +318,8 @@ class Tsp:
                 broken_edge = Edge(t1, t2)
                 broken_cost = self.cost_matrix[(t1.id, t2.id)]
 
-                # loop through the closest possible node t3 from t2 instead of looping through all nodes
-                for (t3, t4), _ in self.get_closest_neighboors(t1, t2):
+                # loop through the best possible nodes (t3,t4) from t2 instead of looping through all nodes
+                for (t3, t4), _ in self.get_best_neighbors(t2):
 
                     # get the joined edge and its cost
                     joined_edge = Edge(t3, t2)
