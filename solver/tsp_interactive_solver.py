@@ -2,6 +2,7 @@
 # remove this after setting the package as a module
 import sys
 import os
+import logging
 sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 from utils.solver_funcs import get_interactive_inputs, solve_tsp
 
@@ -9,4 +10,4 @@ from utils.solver_funcs import get_interactive_inputs, solve_tsp
 tsp_file, solution_method = get_interactive_inputs()
 
 # execute the solver using inputs
-solve_tsp(tsp_file, solution_method)
+solve_tsp(tsp_file, solution_method, 1, logging.DEBUG)

@@ -1,11 +1,8 @@
-import random
-import time
 import math
 import logging
 from itertools import permutations
 from models.edge import Edge
 from models.tour import Tour
-from utils.timer_funcs import improve_timer_decorator
 
 
 # create the logger for the module
@@ -38,12 +35,12 @@ class Tsp:
         # initialize nodes
         self.nodes = nodes
 
-        # shuffle the nodes
-        if shuffle:
-            random.shuffle(self.nodes)
-
         # initialize the tour using the nodes
         self.tour = Tour(self.nodes)
+
+        # shuffle the tour nodes
+        if shuffle:
+            self.tour.shuffle()
 
         # initialize the cost matrix after having the nodes initialized into the tour object using the defined cost_function
         self.cost_matrix = {}
@@ -238,10 +235,10 @@ class Tsp:
                     delta_gain = abs(delta_tour_cost - curr_gain)
 
                     if (delta_gain > self.gain_precision):
-                        logger.error("delta gain error")
+                        logger.debug("delta gain error")
 
                     if (old_tour_cost < self.tour.cost):
-                        logger.error("cost error")
+                        logger.debug("cost error")
 
                     # return true value meaning an improvement was found
                     return True
@@ -309,7 +306,7 @@ class Tsp:
 
         # loop through each node in the tour, to apply the optimization
         # LK Heuristic will loop over all tour nodes as initial nodes (first node is explored in total)
-        for t1 in self.tour.nodes:
+        for t1 in self.tour.get_tour_nodes():
 
             # loop through each neighboorhood node from initial node (second node is also explored as total, so at least 2-opt is always tested for all nodes)
             for t2 in (t1.pred, t1.succ):
@@ -354,7 +351,6 @@ class Tsp:
         # if no improvement is found, return false
         return False
 
-    @improve_timer_decorator
     def lk_improve(self):
         """
         The improve loop using Lin-Kernighan Heuristic. The loop calls main LK optimizer everytime a better tour is found (which will try to optimize the new best tour using the same optimizer). The loop ends when no improvement is found, such that current tour will be the local optimal
@@ -373,12 +369,11 @@ class Tsp:
             improved = self.lk_main()
 
             # log the current tour cost
-            logger.info(f"Current tour '{tour_count}' cost: {self.tour.cost:.3f}")
+            logger.debug(f"Current tour '{tour_count}' cost: {self.tour.cost:.3f}")
 
             # update tour count
             tour_count += 1
 
-    @improve_timer_decorator
     def bf_improve(self):
         """
         The improve loop using Brute-Force computation, which converges for the global optimal tour. All permutations for nodes will be tested. It is recommended only for very small tours (< 10 nodes).
@@ -446,14 +441,10 @@ class Tsp:
         # update the cost value
         self.tour.set_cost(self.cost_matrix)
 
-    @improve_timer_decorator
     def nn_improve(self):
         """
         The improve loop using Nearest-Neighbor computation.
         """
-
-        # get the starting time
-        start_time = time.time()
 
         # create a set of all tsp nodes
         nodes = set(self.nodes)

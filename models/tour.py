@@ -1,3 +1,4 @@
+from random import shuffle
 from models.edge import Edge
 
 
@@ -94,6 +95,31 @@ class Tour:
 
         # assign the cost value
         self.cost = tour_cost
+
+    def shuffle(self):
+        """
+        Shuffle the tour nodes creating a random tour and re-initializing the tour edges 
+        """
+
+        # create random indexes between 1 and size-1
+        indexes = [i for i in range(1, self.size)]
+        shuffle(indexes)
+
+        # add the 0 (first node) at the end of the indexes list
+        indexes.append(0)
+
+        # initilize the current node
+        curr_node = self.nodes[0]
+
+        # loop to change the predecessor, successor and position of each node
+        for i in range(-1, self.size - 1):
+            curr_node.succ = self.nodes[indexes[i + 1]]
+            curr_node.pred = self.nodes[indexes[i - 1]]
+            curr_node.pos = i + 1
+            curr_node = curr_node.succ
+
+        # rebuild the edges after shuffling the nodes
+        self.set_edges()
 
     def get_tour_nodes(self):
         """
