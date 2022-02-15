@@ -38,6 +38,10 @@ def plot_tsp_2d(tsp_file):
         'x': 0.5},
         template="plotly_white")
 
+    # remove grid lines
+    fig.update_xaxes(showgrid=False, zeroline=False, showticklabels=False)
+    fig.update_yaxes(showgrid=False, zeroline=False, showticklabels=False)
+
     # lists to colect the plotting data in 2D
     x_coords = []
     y_coords = []
@@ -99,6 +103,16 @@ def plot_tsp_3d(tsp_file):
         'y': 1.0,
         'x': 0.5},
         template="plotly_white")
+
+    # remove grid lines
+    fig.update_layout(
+        scene=dict(
+            xaxis_title='',
+            yaxis_title='',
+            zaxis_title='',
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            zaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
 
     # lists to colect the plotting data in 3D
     x_coords = []
