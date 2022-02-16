@@ -118,6 +118,7 @@ def solve_tsp(tsp_file, solution_method, runs, logging_level):
 
         # shuffle the tour nodes
         tsp.tour.shuffle()
+        tsp.tour.set_cost(tsp.cost_matrix)
 
         # execute the improvement method and timeit
         logger.debug("Starting improve method")
