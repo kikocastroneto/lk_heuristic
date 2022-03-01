@@ -31,11 +31,12 @@ The use of this package is based on [.tsp files][tsplib] as the input to the imp
 
 ### Solvers
 
-The package contains 3 possible solvers for the TSP problem, which can be selected during interactive mode or silent mode:
+The package contains 4 possible solvers for the TSP problem, which can be selected during interactive mode or silent mode:
 
   1. **Brute-Force**: test all tour possibilities (this should be used for very small problems)
   2. **Nearest-Neighbor**: collect nearest nodes starting from a random node (fast, but non-optimal)
-  3. **Lin-Kernighan**: The main algorithm of the package 
+  3. **Lin-Kernighan 1**: LK algorithm inspired by the original LK Paper
+  4. **Lin-Kernighan 2**: LK algorithm inspired by Helsgaum LK-simplification and Arthur Mahéo python implementation 
 
 Methods 1 and 2 were implemented mostly for testing reasons and some performance comparisons, so the recommended solver is Lin-Kernighan.
 
@@ -70,35 +71,33 @@ Example:
 # Step 1 - TSP Instance Selection #
 *TSP instances avaliable in 'samples' directory:
 [0] - a280.tsp
-[1] - hexagon_2d.tsp
-[2] - hexagon_3d.tsp
---> Select one of the instances: 1
+[1] - att48.tsp
+[2] - hexagon_2d.tsp
+[3] - hexagon_3d.tsp
+--> Select one of the instances: 2
 
 # Step 2 - TSP Solution Methods #
 *TSP solution methods avaliable in tsp.py:
 [0] - bf_improve
 [1] - nn_improve
-[2] - lk_improve
+[2] - lk1_improve
+[3] - lk2_improve
 --> Select one of the solution methods: 2
 
-2022-02-06 12:01:19,781 [INFO] utils.solver_funcs: Importing .tsp file 'hexagon_2d.tsp'
-2022-02-06 12:01:19,785 [INFO] utils.solver_funcs: Using 'cost_func_2d' for edge type 'EUC_2D'
-2022-02-06 12:01:19,786 [DEBUG] utils.solver_funcs: Creating TSP instance
-2022-02-06 12:01:19,788 [DEBUG] utils.solver_funcs: Starting improve method
-2022-02-06 12:01:19,789 [DEBUG] models.tsp: delta gain error
-2022-02-06 12:01:19,789 [DEBUG] models.tsp: Current tour '1' cost: 22.597
-2022-02-06 12:01:19,790 [DEBUG] models.tsp: Current tour '2' cost: 22.419
-2022-02-06 12:01:19,790 [DEBUG] models.tsp: Current tour '3' cost: 20.597
-2022-02-06 12:01:19,791 [DEBUG] models.tsp: Current tour '4' cost: 19.597
-2022-02-06 12:01:19,792 [DEBUG] models.tsp: Current tour '5' cost: 19.189
-2022-02-06 12:01:19,792 [DEBUG] models.tsp: Current tour '6' cost: 15.153
-2022-02-06 12:01:19,795 [DEBUG] models.tsp: Current tour '7' cost: 15.121
-2022-02-06 12:01:19,799 [DEBUG] models.tsp: Current tour '8' cost: 11.531
-2022-02-06 12:01:19,801 [DEBUG] models.tsp: Current tour '9' cost: 10.945
-2022-02-06 12:01:19,803 [DEBUG] models.tsp: Current tour '10' cost: 9.657
-2022-02-06 12:01:19,805 [DEBUG] models.tsp: Current tour '11' cost: 9.657
-2022-02-06 12:01:19,810 [INFO] utils.solver_funcs: [Run:1] --> Cost: 9.657 / Best: 9.657 / Mean: 9.657 (0.018s)
-2022-02-06 12:01:19,811 [INFO] utils.solver_funcs: Exporting 'hexagon_2d_9.657.tsp' file to solutions folder
+2022-03-01 09:35:26,279 [INFO] utils.solver_funcs: Importing .tsp file 'hexagon_2d.tsp'
+2022-03-01 09:35:26,280 [INFO] utils.solver_funcs: Using 'cost_func_2d' for edge type 'EUC_2D'
+2022-03-01 09:35:26,281 [DEBUG] utils.solver_funcs: Creating TSP instance
+2022-03-01 09:35:26,282 [DEBUG] utils.solver_funcs: Starting improve method
+2022-03-01 09:35:26,284 [DEBUG] models.tsp: Current tour '1' cost: 24.416
+2022-03-01 09:35:26,285 [DEBUG] models.tsp: Current tour '2' cost: 20.180
+2022-03-01 09:35:26,286 [DEBUG] models.tsp: Current tour '3' cost: 17.529
+2022-03-01 09:35:26,287 [DEBUG] models.tsp: Current tour '4' cost: 16.529
+2022-03-01 09:35:26,288 [DEBUG] models.tsp: Current tour '5' cost: 15.913
+2022-03-01 09:35:26,295 [DEBUG] models.tsp: Current tour '6' cost: 10.657
+2022-03-01 09:35:26,297 [DEBUG] models.tsp: Current tour '7' cost: 9.657
+2022-03-01 09:35:26,299 [DEBUG] models.tsp: Current tour '8' cost: 9.657
+2022-03-01 09:35:26,300 [INFO] utils.solver_funcs: [Run:1] --> Cost: 9.657 / Best: 9.657 / Mean: 9.657 (0.017s)
+2022-03-01 09:35:26,300 [INFO] utils.solver_funcs: Exporting 'hexagon_2d_9.657.tsp' file to solutions folder
 ```
 
 ### Example of a silent run 
