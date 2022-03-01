@@ -111,7 +111,7 @@ def solve_tsp(tsp_file, solution_method, runs, logging_level):
 
     # create the initial tsp instance
     logger.debug("Creating TSP instance")
-    tsp = Tsp(tsp_nodes, cost_function, shuffle=True, max_neighbors=5)
+    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, max_neighbors=5)
 
     # looping through each run
     for run in range(1, runs + 1):
