@@ -22,14 +22,14 @@ class Edge:
 
     def __eq__(self, other):
         """
-        Comparison method between two edges. The edge is equal if its nodes are equal. The edge {n1,n2} will be equal to {n2,n1}, because when initializing the edges, nodes are ordered (check initialization method)
+        Comparison method between two edges. The edge is equal if its nodes are equal. The edge {n1,n2} will be equal to {n2,n1}. It is required to check the inverted conditions since node comparison will also compare node id (to be able to create two equal coordinates nodes - relevant for a280.tsp) and in this situation, node comparison would be false.
 
         :param other: the other edge to compare
         :type other: Edge
         :return: a boolean indicating if both edges are the same
         :rtype: boolean
         """
-        return self.n1 == other.n1 and self.n2 == other.n2
+        return (self.n1 == other.n1 and self.n2 == other.n2) or (self.n1 == other.n2 and self.n2 == other.n1)
 
     def __hash__(self):
         """
