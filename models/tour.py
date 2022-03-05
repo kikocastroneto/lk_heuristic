@@ -68,6 +68,9 @@ class Tour:
             tour_edges.add(Edge(curr_node, curr_node.succ))
             curr_node = curr_node.succ
 
+        # add the closing edge
+        tour_edges.add(Edge(curr_node, curr_node.succ))
+
         # populate the edges
         self.edges = tour_edges
 
