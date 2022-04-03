@@ -18,7 +18,7 @@ class Tsp:
     # this is required when computing the gain in "simmetric" tours, to avoid incorrect calculations when using just "> 0"
     gain_precision = 0.01
 
-    def __init__(self, nodes, cost_function, shuffle=False, max_neighbors=5):
+    def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4):
         """
         The TSP input is a list of nodes which will be used as input to build a tour and a cost function to build the cost matrix.
 
@@ -28,8 +28,10 @@ class Tsp:
         :type cost_function: function
         :param shuffle: a boolean value indicating if nodes shall be shuffled before building the tour
         :type shuffle: boolean
-        :param max_neighbors: the max number of closest neighbors to use in lookahead search 
-        :type max_neighbors: int
+        :param backtracking: the number of closest neighbors to use in each backtracking level.
+        :type backtracking: tuple
+        :param reduction_level: the starting level where reducted edges will start being considered
+        :type reduction_level: int
         """
 
         # initialize nodes
@@ -57,22 +59,30 @@ class Tsp:
             "lk2_improve": self.lk2_improve,
         }
 
-        # init the swap stack
-        # the swap stack is the "memory" of swap_nodes function of the tour objects, so that if an invalid sequence of swap are made it is possible to "undo" the swap by executing the swaps in reversed order using the stack of swaps
-        self.swap_stack = []
-
         # init the set of solutions
         # the set of solutions will help to avoid repeated tours analysis
         # it is a hash of a tuple of node sequences
         self.solutions = set()
 
         # init a dict of closest neighbors
-        # each node will have a maximum number of closest neighbors defined by the cost between them
+        # each node will have a maximum number of closest neighbors defined by the cost between them. It is required to use the maximum value of the backtracking.
         self.closest_neighbors = {}
-        self.set_closest_neighboors(max_neighbors=max_neighbors)
+        self.set_closest_neighboors(max_neighbors=max(backtracking))
 
-        # set of gains to close the tour found during the search
-        self.best_close_gains = []
+        # init the bactracking levels
+        # each value represent the number of neighbors to try in each search level
+        self.backtracking = backtracking
+
+        # init the reduction starting level and count value and reduction edges set
+        # this set contains the non-intersected edges at a maximum reduction levels
+        # the set is initialized with the tour edges
+        self.reduction_level = reduction_level
+        self.reduction_count = 0
+        self.reduction_edges = set(self.tour.edges)
+
+        # gains values collected during the search and the best gain value
+        self.close_gains = []
+        self.best_close_gain = 0
 
     def set_cost_matrix(self, cost_func):
         """
@@ -100,32 +110,9 @@ class Tsp:
             # update index for next iteration
             index += 1
 
-    def restore_tour(self):
+    def set_closest_neighboors(self, max_neighbors):
         """
-        Restore an initial tour that passed through some 2-opt swaps. The swaps are undone until no more swaps can be made, from last swap to initial one. The reversed operation of a swap_nodes(t1,t2,t3,t4) is swap_nodes(t3,t2,t1,t4)
-        """
-
-        # loop until no more swap stacks
-        while (self.swap_stack):
-
-            # get last stack
-            curr_stack = self.swap_stack[-1]
-
-            # collect node values
-            t1 = curr_stack[0]
-            t2 = curr_stack[1]
-            t3 = curr_stack[2]
-            t4 = curr_stack[3]
-
-            # execute the reversed swap
-            self.tour.swap_nodes(t3, t2, t1, t4)
-
-            # remove last stack
-            self.swap_stack.pop()
-
-    def set_closest_neighboors(self, max_neighbors=5):
-        """
-        Get the closest neighbors of each tsp node using the cost_matrix values. The return will be a dict of each node as key and the value is a list of closest nodes. The number of values to be returned inside the list is defined by the max_neighboors variable, which at LK paper, is suggested to be 5 (but this will depend on the size of the problem).
+        Get the closest neighbors of each tsp node using the cost_matrix values. The return will be a dict of each node as key and the value is a list of closest nodes. The number of values to be returned inside the list is defined by the max_neighboors variable.
 
         This function, combined with the get_best_neighbors, is the lookahead refinement from LK paper, where the best swaps from the closest neighbors of a node direct the search and speed up performance.
 
@@ -147,12 +134,14 @@ class Tsp:
             # populate neighbor list with the best neighbors
             self.closest_neighbors[node1] = [neighbor[0] for neighbor in neighbors_min]
 
-    def get_best_neighbors(self, t2):
+    def get_best_neighbors(self, t2, t1=None):
         """
-        Get the best tuple of nodes (t3,t4) by computing the gain of swapping the closest neighbors of t2 (i.e, swapping (t3,t4) with (t2,t3)). This is the lookahead refinement where the nodes to be selected for executing the swap are sorted/selected by best gain.
+        Get the best tuple of nodes (t3,t4) by computing the gain of swapping the closest neighbors of t2 (i.e, swapping (t3,t4) with (t2,t3)). This is the lookahead refinement where the nodes to be selected for executing the swap are sorted/selected by best gain. Node t1 is used in this function to check if the swap (t1,t2,t3,t4) is valid. If t1 is not provided, the swap is done without checking if it is valid.
 
         :param t2: the t2 node from where best neighbors shall be found
         :type t2: Node
+        :param t1: the t1 node (neighbor of t2 that makes the broken edge)
+        :type t1: Node
         :return: a dict with keys (t3,t4) and value is the gain
         :rtype: dict
         """
@@ -164,17 +153,151 @@ class Tsp:
         for t3 in self.closest_neighbors[t2]:
             # loop through each possible t4
             for t4 in (t3.pred, t3.succ):
-                # compute the gain
-                best_neighbors[(t3, t4)] = self.cost_matrix[(t3.id, t4.id)] - self.cost_matrix[t2.id, t3.id]
+                # check if swap is valid
+                if (t1):
+                    if (self.tour.is_swap_feasible(t1, t2, t3, t4)):
+                        # compute the gain
+                        best_neighbors[(t3, t4)] = self.cost_matrix[(t3.id, t4.id)] - self.cost_matrix[t2.id, t3.id]
+                # compute the gain not checking for valid swaps
+                else:
+                    # compute the gain
+                    best_neighbors[(t3, t4)] = self.cost_matrix[(t3.id, t4.id)] - self.cost_matrix[t2.id, t3.id]
 
         # returns a list of (key,value) pairs of the max values of gain.
         return sorted(best_neighbors.items(), key=lambda x: x[1], reverse=True)
 
-    def lk1_search(self, gain, t1, t2, t3, t4, broken_edges, joined_edges):
+    def lk1_feasible_search(self, level, gain, swap_func, t1, t2, t3, t4, broken_edges, joined_edges):
         """
-        This is the main search loop of LK Heuristic, trying to find broken and joined edges in such way that a feasible tour with lower cost is found. The search is recursivelly called while potential nodes exists.
+        This is the main search loop of LK Heuristic, trying to find broken and joined edges in such way that a feasible tour with lower cost is found. The search is recursivelly called while potential nodes exists. 
 
         The search store both the gain value of closing the loop and the swap memory of the executed swaps. This memory is used when exiting the recursive call, so that is possible to select the best gain found in the search by undoing the executed swaps until the best gain position.
+
+        This function may be called from the unfeasible swap function. In this case, the starting swap function will be a special function that turns an unfeasible function into a feasible one. 
+
+        :param level: the current level of the search to compare with backtracking levels
+        :type level: int
+        :param gain: the current gain from last LK step
+        :type gain: float
+        :param swap_func: the swap function to be used at nodes (t1, t2, t3, t4)
+        :type swap_func: str
+        :param t1: the tail node of the first broken edge in the 2-opt swap
+        :type t1: Node2D
+        :param t2: the head node of the first broken edge in the 2-opt swap
+        :type t2: Node2D
+        :param t3: the tail node of the second broken edge in the 2-opt swap
+        :type t3: Node2D
+        :param t4: the head node of the second broken edge in the 2-opt swap
+        :type t4: Node2D
+        :param broken_edges: the set of broken edges
+        :type broken_edges: set
+        :param joined_edges: the set of joined edges
+        :type joined_edges: set
+        """
+
+        # step 4(a) at LK Paper is omitted here since the feasibility criterion is done when searching for the best neighbors in a swap. When entering this function, step 4(a) was already checked by the get best neighbors function.
+
+        # set xi edge (the new edge to be broken)
+        broken_edge = Edge(t3, t4)
+        broken_cost = self.cost_matrix[(t3.id, t4.id)]
+
+        # apply the reduction refinement from LK Paper
+        # if xi in reduction_edges just exit the function
+        if (self.reduction_count >= self.reduction_level and broken_edge in self.reduction_edges):
+            return
+
+        # update the sets of broken and joined edges using the swap nodes
+        broken_edges.add(Edge(t1, t2))
+        joined_edges.add(Edge(t2, t3))
+
+        # execute the swap based on the swap function to be executed
+        # when coming from previous feasible swap, a feasible swap is reaplied
+        # when coming from a previous unfeasible swap, the node between t2 and t3 is applied
+        if swap_func == "swap_feasible":
+            self.tour.swap_feasible(t1, t2, t3, t4)
+        elif swap_func == "swap_node_between_t2_t3":
+            self.tour.swap_node_between_t2_t3(t1, t2, t3, t4)
+
+        # set yi edge to close the tour (instead of continuing exploration)
+        # also check that close joined edge is valid (disjoint and not already in tour)
+        joined_close_edge = Edge(t4, t1)
+        joined_close_cost = self.cost_matrix[(t4.id, t1.id)]
+        joined_close_valid = joined_close_edge not in self.tour.edges and joined_close_edge not in broken_edges
+
+        # compute the gain of closing the tour and add it to close gain list
+        # also update the best gain found so far for closing the tour
+        close_gain = gain + (broken_cost - joined_close_cost)
+        self.close_gains.append(close_gain)
+        self.best_close_gain = close_gain if close_gain > self.best_close_gain else self.best_close_gain
+
+        # get the number of backtracked neighbors at current level (defaults to 1 if no value is defined at backtracking parameter)
+        curr_backtracking = 1
+        if (level <= len(self.backtracking) - 1):
+            curr_backtracking = self.backtracking[level]
+
+        # yi is selected based on best neighbors of t4
+        # next_y_head is the selected yi head node (at the end of the yi)
+        # next_x_head is the xi+1 head node (at the end of the xi+1)
+        # this is step 4(b) at LK Paper (with the lookahead refinement - 2.B)
+        for (next_y_head, next_x_head), _ in self.get_best_neighbors(t4, t1)[:curr_backtracking]:
+
+            # set yi edge
+            joined_edge = Edge(t4, next_y_head)
+            joined_cost = self.cost_matrix[(t4.id, next_y_head.id)]
+
+            # compute gain for exploration (i.e, if not closing the tour)
+            explore_gain = gain + (broken_cost - joined_cost)
+
+            # disjoint criteria (xi can't be previously joined and yi can't be previously broken)
+            # it is also required to check if broken edge is not repeated and if joined edge is not already in tour
+            # this is step 4(c) in LK Paper
+            disjoint_criteria = False
+            if broken_edge not in broken_edges and broken_edge not in joined_edges:
+                if joined_edge not in self.tour.edges and joined_edge not in broken_edges:
+                    disjoint_criteria = True
+
+            # gain criteria (gain must be positive)
+            # this is step 4(d) in LK Paper
+            gain_criteria = False
+            if explore_gain > self.gain_precision:
+                gain_criteria = True
+
+            # xi+1 criteria (next x must be possible to be broken)
+            # next x can be broken if it follows the disjoint criteria and is not repeated (already broken)
+            # this is step 4(e) in LK Paper
+            next_xi_criteria = False
+            next_broken_edge = Edge(next_y_head, next_x_head)
+            if (next_broken_edge not in broken_edges and next_broken_edge not in joined_edges):
+                next_xi_criteria = True
+
+            # checking the 3 required criterias (4c, 4d and 4e), as mentioned in step 4(b) in LK Paper
+            if disjoint_criteria and gain_criteria and next_xi_criteria:
+
+                # check for repeated tours (checkout refinement - 2.A)
+                if (hash(tuple([node.succ.id for node in self.tour.nodes])) in self.solutions):
+                    return
+
+                # checking if closing the tour will lead to a better gain than continuing exploration
+                # if close is better than explore, ends the loop
+                # if explore is better than close, call the search loop with new nodes
+                # this is step 4(f) at LK Paper
+                if (close_gain > explore_gain and close_gain >= self.best_close_gain and close_gain > self.gain_precision and joined_close_valid):
+
+                    # update the sets of broken and joined edges
+                    broken_edges.add(broken_edge)
+                    joined_edges.add(joined_close_edge)
+
+                    # end the loop if closing is better than exploring
+                    return
+
+                else:
+
+                    # continue the exploration, if it is better than closing the tour
+                    # this is the return to step 4 with i = i + 1 at LK Paper
+                    return self.lk1_feasible_search(level + 1, explore_gain, "swap_feasible", t1, t4, next_y_head, next_x_head, broken_edges, joined_edges)
+
+    def lk1_unfeasible_search(self, gain, t1, t2, t3, t4, broken_edges, joined_edges):
+        """
+        This is the alternative search loop of LK Heuristic at level 1, when the swap of the nodes t1, t2, t3, t4 leads to an unfeasible tour. LK suggest that in this condition, a special search shall be made looking for nodes t5, t6 (t7 and t8, if required) in such way that the unfeasible tour turns into a feasible one. If a feasible tour is found with better gain, a call for the main loop search is made. This is the step 6(b) in LK Paper.
 
         :param gain: the current gain from last LK step
         :type gain: float
@@ -192,91 +315,140 @@ class Tsp:
         :type joined_edges: set
         """
 
-        # TODO: INCLUDE A LEVEL PARAMETER AT THIS FUNCTION FOR THE BREADTH OF THE SEARCH.
-        # WITH THIS IS POSSIBLE TO CHANGE THE GET_BEST_NEIGHBORS SINCE LK SUGGEST TO USE 5 AT FIRST AND SECOND JOINED EDGES AND ONLY ONE AT NEXT ONES. THE BREADTH IS ALSO USED AT CHAINED LK, SO IT IS A GOOD FEATURE TO HAVE IMPLEMENTED
+        # update the sets of broken and joined edges using the swap nodes
+        # adding x1 and y1
+        broken_edges.add(Edge(t1, t2))
+        joined_edges.add(Edge(t2, t3))
 
-        # check that breaking xi and selecting yi to close the tour results in a valid tour
-        # this is step 4(a) of LK Paper
-        if self.tour.is_swap_valid(t1, t2, t3, t4):
+        # the broken edge (x2) that will lead to 2 separated tours
+        broken_edge_1 = Edge(t3, t4)
+        broken_cost_1 = self.cost_matrix[(t3.id, t4.id)]
 
-            # set xi edge (the new edge to be broken)
-            broken_edge = Edge(t3, t4)
-            broken_cost = self.cost_matrix[(t3.id, t4.id)]
+        # execute the unfeasible swap (creating two separated tours)
+        # append a dummy gain value for the unfeasible swap
+        # this is the step represented at Fig. 4(a) in LK Paper
+        self.tour.swap_unfeasible(t1, t2, t3, t4)
+        self.close_gains.append(-1)
 
-            # yi is selected based on best neighbors of t4
-            # next_y_head is the selected yi head node (at the end of the yi)
-            # next_x_head is the xi+1 head node (at the end of the xi+1)
-            # this is step 4(b) at LK Paper (with the lookahead refinement)
-            for (next_y_head, next_x_head), _ in self.get_best_neighbors(t4):
+        # looking for the best neighbors of t4 at second level of backtracking
+        for (t5, t6), _ in self.get_best_neighbors(t4)[:self.backtracking[1]]:
 
-                # set yi edge
-                joined_edge = Edge(t4, next_y_head)
-                joined_cost = self.cost_matrix[(t4.id, next_y_head.id)]
+            # set y2 edge
+            joined_edge_1 = Edge(t4, t5)
+            joined_cost_1 = self.cost_matrix[(t4.id, t5.id)]
 
-                # compute gain for exploration (not closing the tour from t4 to t1)
-                gain_explore = gain + (broken_cost - joined_cost)
+            # compute gain for exploration (not closing the tour but accepting the exploring node t5)
+            explore_gain = gain + (broken_cost_1 - joined_cost_1)
 
-                # disjoint criteria (xi can't be previously joined and y1 can't be previously broken)
-                # it is also required to check if broken edge is not repeated and if joined edge is not already in tour
-                # this is step 4(c) in LK Paper
-                disjoint_criteria = False
-                if broken_edge not in broken_edges and broken_edge not in joined_edges:
-                    if joined_edge not in self.tour.edges and joined_edge not in broken_edges:
-                        disjoint_criteria = True
+            # gain criteria (gain must be positive)
+            # the gain criteria shall be validated even if using an unfeasible tour
+            gain_criteria = False
+            if explore_gain > self.gain_precision:
+                gain_criteria = True
 
-                # gain criteria (gain must be positive)
-                # this is step 4(d) in LK Paper
-                gain_criteria = False
-                if gain_explore > self.gain_precision:
-                    gain_criteria = True
+            # checking if (t5,t6) is a valid choice
+            # t5 and t6 must be different from t1,t2,t3,t4 (it must lie between those nodes)
+            valid_nodes = False
+            if (t5 != t1 and t5 != t2 and t5 != t3 and t5 != t4):
+                if (t6 != t1 and t6 != t2 and t6 != t3 and t6 != t4):
+                    valid_nodes = True
 
-                # xi+1 criteria (next x must be possible to be broken)
-                # next x can be broken if it follows the disjoint criteria and is not repeated (already broken)
-                # this is step 4(e) in LK Paper
-                next_xi_criteria = False
-                next_broken_edge = Edge(next_y_head, next_x_head)
-                if (next_broken_edge not in broken_edges and next_broken_edge not in joined_edges):
-                    next_xi_criteria = True
+            # checking for valid node selection with positive gain
+            if valid_nodes and gain_criteria:
 
-                # checking the 3 required criterias (4c, 4d and 4e), as mentioned in step 4(b) in LK Paper
-                if disjoint_criteria and gain_criteria and next_xi_criteria:
+                # set x3 edge
+                broken_edge_2 = Edge(t5, t6)
+                broken_cost_2 = self.cost_matrix[(t5.id, t6.id)]
 
-                    # set yi edge to close the tour (instead of continuing exploration)
-                    # also check that close joined edge is valid (disjoint and not already in tour)
-                    joined_close_edge = Edge(t4, t1)
-                    joined_close_cost = self.cost_matrix[(t4.id, t1.id)]
-                    joined_close_valid = joined_close_edge not in self.tour.edges and joined_close_edge not in broken_edges
+                # a boolean checking if t5 is between t1-t4 segment
+                t5_between_t1_t4 = False
 
-                    # compute the gain of closing the tour
-                    gain_close = gain + (broken_cost - joined_close_cost)
+                # checking the order of the segment t1-t4
+                t1_after_t4 = t4.succ == t1
 
-                    # execute the swap and append nodes to swap memory
-                    self.tour.swap_nodes(t1, t2, t3, t4)
-                    self.swap_stack.append((t1, t2, t3, t4))
+                # validate if t5 is between t1-t4
+                if t1_after_t4:
+                    t5_between_t1_t4 = self.tour.between(t1, t5, t4)
+                else:
+                    t5_between_t1_t4 = self.tour.between(t4, t5, t1)
 
-                    # store the gain of closing the tour at gain list
-                    self.best_close_gains.append(gain_close)
+                # t5 condition of being between t1 and t4
+                if (t5_between_t1_t4):
 
-                    # check for repeated tours (one of LK refinements is to remove repeated tours that already were tested and checked that can't be improved). O(n) complexity like the one done below could be improved with hashingtables, as done by Helsgaum.
-                    if (hash(tuple([node.succ.id for node in self.tour.nodes])) in self.solutions):
-                        return
+                    # checking if t5 swap is feasible
+                    if (self.tour.is_swap_feasible(t1, t4, t5, t6)):
 
-                    # checking that closing the tour will lead to a better gain than continuing exploration
-                    # this is step 4(f) at LK Paper
-                    if (gain_close > gain_explore and gain_close > self.gain_precision and joined_close_valid):
+                        # when looking for (t7,t8) search level = 3, so theres's no backtracking (t7 is selected by the only best neighbor)
+                        for (t7, t8), _ in self.get_best_neighbors(t6)[:1]:
 
-                        # end the loop if closing is better than exploring
-                        return
+                            # set y3 edge
+                            joined_edge_2 = Edge(t6, t7)
+                            joined_cost_2 = self.cost_matrix[(t6.id, t7.id)]
 
-                    else:
+                            # update the exploration gain
+                            explore_gain += (broken_cost_2 - joined_cost_2)
 
-                        # update the sets of broken and joined edges
-                        broken_edges.add(broken_edge)
-                        joined_edges.add(joined_edge)
+                            # gain criteria (gain must be positive)
+                            gain_criteria = False
+                            if explore_gain > self.gain_precision:
+                                gain_criteria = True
 
-                        # continue the exploration, if it is better than closing the tour
-                        # this is the return to step 4 with i = i + 1 at LK Paper
-                        self.lk1_search(gain_explore, t1, t4, next_y_head, next_x_head, broken_edges, joined_edges)
+                            # a boolean checking if t7 is between t2-t3 segment
+                            t7_between_t2_t3 = False
+
+                            # checking the order of the segment t2-t3
+                            t2_after_t3 = t3.succ == t2
+
+                            # validate if t7 is between t2-t3
+                            if t2_after_t3:
+                                t7_between_t2_t3 = self.tour.between(t2, t7, t3)
+                            else:
+                                t7_between_t2_t3 = self.tour.between(t3, t7, t2)
+
+                            # checking if (t7,t8) is a valid choice
+                            # t7 and t8 must be different from t2,t3 (it must lie between those nodes)
+                            valid_nodes = False
+                            if (t7 != t2 and t7 != t3 and t8 != t2 and t8 != t3):
+                                valid_nodes = True
+
+                            # (t7,t8) will define the x4 broken edge. LK suggest to select the greater x4 value possible from t7. This is something already done by the get_best_neighbors function, since it selected the maximum delta between (t8,t7) - (t6,t7)
+
+                            # validating gain criteria and if selected nodes are valid
+                            if gain_criteria and valid_nodes and t7_between_t2_t3:
+
+                                # set xi edge (the new edge to be broken)
+                                broken_edge_3 = Edge(t7, t8)
+
+                                # execute the swap of t5 being between t1-t4 and append a dummy value
+                                # for this special swap, t1-t4 is a subtour of an unfeasible tour
+                                self.tour.swap_feasible(t1, t4, t5, t6, is_subtour=True)
+                                self.close_gains.append(-1)
+
+                                # update the sets of broken and joined edges
+                                broken_edges.add(broken_edge_1)
+                                broken_edges.add(broken_edge_2)
+                                broken_edges.add(broken_edge_3)
+                                joined_edges.add(joined_edge_1)
+                                joined_edges.add(joined_edge_2)
+
+                                # continue the exploration with feasible search, applied with a special swap function
+                                # this is the return to step 4 with i = i + 1 at LK Paper
+                                return self.lk1_feasible_search(4, explore_gain, "swap_node_between_t2_t3", t1, t6, t7, t8, broken_edges, joined_edges)
+
+                # if t5 is between t2 and t3, t6 will be joined to t1 to close the loop
+                else:
+
+                    # update the sets of broken and joined edges
+                    broken_edges.add(broken_edge_1)
+                    broken_edges.add(broken_edge_2)
+                    joined_edges.add(joined_edge_1)
+
+                    # continue the exploration, if it is better than closing the tour
+                    # this is the return to step 4 with i = i + 1 at LK Paper
+                    return self.lk1_feasible_search(3, explore_gain, "swap_node_between_t2_t3", t1, t4, t5, t6, broken_edges, joined_edges)
+
+        # if no improvement was found in the unfeasible search, undo the unfeasible swap
+        self.tour.restore()
 
     def lk1_main(self):
         """
@@ -289,7 +461,7 @@ class Tsp:
         # loop through each node in the tour, to apply the optimization
         # LK Heuristic will loop over all tour nodes as initial nodes (first node is explored in total)
         # this is step 2 and 6(e) in LK Paper
-        for t1 in self.tour.get_tour_nodes():
+        for t1 in self.tour.get_nodes():
 
             # loop through each neighboorhood node from initial node (second node is also explored as total, so at least 2-opt is always tested for all nodes)
             # this is step 2 and 6(d) in LK Paper
@@ -300,9 +472,14 @@ class Tsp:
                 broken_edge = Edge(t1, t2)
                 broken_cost = self.cost_matrix[(t1.id, t2.id)]
 
-                # loop through the best possible nodes (t3,t4) from t2 instead of looping through all nodes
-                # this is step 3 and 6(c) in LK Paper (with additional lookahead refinement)
-                for (t3, t4), _ in self.get_best_neighbors(t2):
+                # apply the reduction refinement from LK Paper (refinement 2.C in LK paper)
+                if (self.reduction_count >= self.reduction_level and broken_edge in self.reduction_edges):
+                    continue
+
+                # loop through the best possible nodes (t3,t4) from t2 instead of looping through all nodes. The number of best nodes is defined by the backtracking parameter.
+                # this is step 3 and 6(c) in LK Paper (with additional lookahead refinement - 2.B in LK paper)
+                # there's also step 4(a) in the get best neighbors, since the function checks if swap is valid for the nodes t1,t2,t3,t4
+                for (t3, t4), _ in self.get_best_neighbors(t2)[:self.backtracking[0]]:
 
                     # get the joined edge (y1) and its cost
                     joined_edge = Edge(t3, t2)
@@ -316,60 +493,74 @@ class Tsp:
                     # this is step 3 in LK Paper
                     if joined_edge not in self.tour.edges and gain > self.gain_precision:
 
-                        # append the edges to each edges set
-                        broken_edges = set([broken_edge])
-                        joined_edges = set([joined_edge])
+                        # initialize broken and joined edges set
+                        broken_edges = set()
+                        joined_edges = set()
+
+                        # reset the swap stack and gain objects before the search loop
+                        self.tour.swap_stack.clear()
+                        self.close_gains.clear()
+                        self.best_close_gain = 0
 
                         # execute the search loop
-                        self.lk1_search(gain, t1, t2, t3, t4, broken_edges, joined_edges)
+                        # if swap is feasible, execute the normal search
+                        # if swap is unfeasible (2 separated tours), execute specific search from step 6(b) in LK Paper
+                        if (self.tour.is_swap_feasible(t1, t2, t3, t4)):
+                            self.lk1_feasible_search(1, gain, "swap_feasible", t1, t2, t3, t4, broken_edges, joined_edges)
+                        elif (self.tour.is_swap_unfeasible(t1, t2, t3, t4)):
+                            self.lk1_unfeasible_search(gain, t1, t2, t3, t4, broken_edges, joined_edges)
 
-                        # check if a better gain was found
-                        # this is step 5 of LK Paper
-                        if self.best_close_gains:
-                            if (max(self.best_close_gains) > 0):
+                        # check if a new gain was found
+                        if self.close_gains:
+                            # check if best gain is positive
+                            # this is step 5 of LK Paper
+                            if (max(self.close_gains) > 0):
 
-                                # get the index of the best gain
-                                best_index = self.best_close_gains.index(max(self.best_close_gains))
+                                # get the index of the best gain found
+                                # LK search is done until gain is positive, but the best gain may not be the last one found
+                                best_index = self.close_gains.index(max(self.close_gains))
 
-                                # the search method will do swaps until search ended and keep the gain values
-                                # here the swaps are "undone" until best gain found
-                                for i in range(len(self.best_close_gains) - 1, best_index, -1):
-                                    n1, n2, n3, n4 = self.swap_stack[i]
-                                    self.tour.swap_nodes(n3, n2, n1, n4)
+                                # update tour edges joined and removed until best swap (which matches the index of the best gain)
+                                for i in range(best_index + 1):
+                                    (n1, n2, n3, n4, _) = self.tour.swap_stack[i]
+                                    self.tour.edges.remove(Edge(n1, n2))
+                                    self.tour.edges.remove(Edge(n3, n4))
+                                    self.tour.edges.add(Edge(n2, n3))
+                                    self.tour.edges.add(Edge(n4, n1))
+
+                                # undo executed swaps until best gain index
+                                self.tour.restore((len(self.close_gains) - 1) - best_index)
+
+                                # sanity check (remove in the future)
+                                test_edges = set(self.tour.edges)
+                                self.tour.set_edges()
+                                if (test_edges != self.tour.edges):
+                                    print("processing error: new tour edges are incorrect: ")
+                                    print(self.tour.edges - test_edges)
 
                                 # a sanity check that the difference in old and new cost matches the delta gain value
                                 old_cost = self.tour.cost
                                 self.tour.set_cost(self.cost_matrix)  # compute the new cost for the new tour
                                 new_cost = self.tour.cost
-                                diff = abs(old_cost - new_cost - max(self.best_close_gains))
+                                diff = abs(old_cost - new_cost - max(self.close_gains))
                                 if diff > self.gain_precision:
                                     logger.debug("processing error: delta gain is incorrect")
 
-                                # add the solution string to the set
+                                # update the reduction edges by intersecting reduction edges with new tour edges and the reduction count is incremented
+                                self.reduction_edges = self.reduction_edges.intersection(self.tour.edges)
+                                self.reduction_count += 1
+
+                                # add the solution string to the set (indirect and reversed order)
                                 self.solutions.add(hash(tuple([node.succ.id for node in self.tour.nodes])))
                                 self.solutions.add(hash(tuple([node.pred.id for node in self.tour.nodes])))
-
-                                # reset the swap stack and best gains
-                                self.best_close_gains.clear()
-                                self.swap_stack.clear()
 
                                 # return true if improvement was found
                                 return True
 
                             else:
 
-                                # if best gain found during search is negative, restore the initial tour (since no improvement was found, but swap was made)
-                                self.restore_tour()
-
-                                # reset the swap stack and best gains
-                                self.best_close_gains.clear()
-                                self.swap_stack.clear()
-                        else:
-
-                            # reset the swap stack and best gains
-                            # here no swap was made, since the list is empty
-                            self.best_close_gains.clear()
-                            self.swap_stack.clear()
+                                # if best gain found during search is negative, restore the initial tour (since no improvement was found, but swaps were made)
+                                self.tour.restore()
 
         # if no improvement is found, return false
         return False
@@ -393,7 +584,8 @@ class Tsp:
             improved = self.lk1_main()
 
             # log the current tour cost
-            logger.debug(f"Current tour '{tour_count}' cost: {self.tour.cost:.3f}")
+            logger.debug(
+                f"Current tour '{tour_count}' cost: {self.tour.cost:.3f} / gain: {self.best_close_gain:.3f} / swaps: {len(self.tour.swap_stack)} / feasible swaps: {len([swap for swap in self.tour.swap_stack if swap[4] == 'swap_feasible'])} / unfeasible swaps: {len([swap for swap in self.tour.swap_stack if swap[4] != 'swap_feasible'])}")
 
             # update tour count
             tour_count += 1
@@ -433,11 +625,11 @@ class Tsp:
         # check if broken_edge is not already inside broken_edges set, because an edge can't be broken two times, this would lead to incorrect calculation
         if t1 != t4 and broken_edge not in joined_edges and broken_edge not in broken_edges:
 
-            # try to do the 2-opt swap
-            if (self.tour.swap_nodes(t1, t2, t3, t4)):
+            # check if swap is valid
+            if (self.tour.is_swap_feasible(t1, t2, t3, t4)):
 
-                # include the swap nodes into the swap stack
-                self.swap_stack.append((t1, t2, t3, t4))
+                    # execute the swap
+                self.tour.swap_feasible(t1, t2, t3, t4)
 
                 # add the broken edge to the set of broken edges
                 broken_edges.add(broken_edge)
@@ -508,7 +700,7 @@ class Tsp:
         broken_cost = self.cost_matrix[(t4.id, t1.id)]
 
         # loop through the closest possible node from t4 instead of looping through all nodes
-        for (node, neighbor_node), _ in self.get_best_neighbors(t4):
+        for (node, neighbor_node), _ in self.get_best_neighbors(t4, t1):
 
             # create the edge and get the edge cost
             joined_edge = Edge(t4, node)
@@ -541,7 +733,7 @@ class Tsp:
 
         # loop through each node in the tour, to apply the optimization
         # LK Heuristic will loop over all tour nodes as initial nodes (first node is explored in total)
-        for t1 in self.tour.get_tour_nodes():
+        for t1 in self.tour.get_nodes():
 
             # loop through each neighboorhood node from initial node (second node is also explored as total, so at least 2-opt is always tested for all nodes)
             for t2 in (t1.pred, t1.succ):
@@ -551,7 +743,7 @@ class Tsp:
                 broken_cost = self.cost_matrix[(t1.id, t2.id)]
 
                 # loop through the best possible nodes (t3,t4) from t2 instead of looping through all nodes
-                for (t3, t4), _ in self.get_best_neighbors(t2):
+                for (t3, t4), _ in self.get_best_neighbors(t2, t1):
 
                     # get the joined edge and its cost
                     joined_edge = Edge(t3, t2)
@@ -572,7 +764,7 @@ class Tsp:
                         if self.lk2_select_broken_edge(gain, t1, t2, t3, t4, broken_edges, joined_edges):
 
                             # reset the swap stack
-                            self.swap_stack.clear()
+                            self.tour.swap_stack.clear()
 
                             # add the solution string to the set
                             self.solutions.add(hash(tuple([node.succ.id for node in self.tour.nodes])))
@@ -581,7 +773,7 @@ class Tsp:
                             return True
                         else:
                             # if new best tour was not found, restore the initial tour to continue the loop (if tour was not swapped, it will remain the same)
-                            self.restore_tour()
+                            self.tour.restore()
 
         # if no improvement is found, return false
         return False

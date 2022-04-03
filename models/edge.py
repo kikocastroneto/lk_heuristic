@@ -12,6 +12,10 @@ class Edge:
         :param n2: the second node
         :type n2: Node2D/Node3D
         """
+
+        # asserting that a valid edge can't connect to same node
+        assert(n1 != n2)
+
         if n1 > n2:
             self.n1 = n1
             self.n2 = n2

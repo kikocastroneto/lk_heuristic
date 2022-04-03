@@ -1,3 +1,4 @@
+from audioop import reverse
 from random import shuffle
 from models.edge import Edge
 
@@ -28,6 +29,10 @@ class Tour:
 
         # set the size of the tour
         self.size = len(nodes)
+
+        # init the swap stack
+        # the swap stack is the "memory" of swap functions executed in a specific tour (relevant when required to undo the swaps). it is a tuple on the form (n1, n2, n3, n4, swap_operation)
+        self.swap_stack = []
 
     def set_nodes(self):
         """
@@ -99,6 +104,68 @@ class Tour:
         # assign the cost value
         self.cost = tour_cost
 
+    def set_pos(self):
+        """
+        Set the 'pos' attribute of the nodes from a feasible tour. This function is relevant after performing unfeasible swaps that only reorder nodes pred/succ attribute but leaves the pos attribute incorrect. After converging to a feasible tour, call this function to update the pos attribute.
+        """
+
+        # initialization with first node
+        curr_node = self.nodes[0]
+        curr_node.pos = 0
+
+        # loop until all nodes have been seen
+        while curr_node.succ != self.nodes[0]:
+
+            # update current node
+            curr_node = curr_node.succ
+            curr_node.pos = curr_node.pred.pos + 1
+
+    def get_nodes(self):
+        """
+        Get the nodes inside the tour sorted by their sequence and return the list of nodes
+
+        :return: the list of node indexes
+        :rtype: list
+        """
+
+        # a set of nodes to check if all nodes were analyzed
+        visited_nodes = set(self.nodes)
+
+        # start a list of sorted nodes
+        tour_nodes = []
+
+        # initialization with first
+        curr_node = self.nodes[0]
+        visited_nodes.remove(curr_node)
+
+        # loop until all nodes have been seen (this is necessary for unfeasible tours, like two separated subtours)
+        while len(visited_nodes) > 0:
+
+            # loop through each tour node checking if it was not visited yet
+            while curr_node.succ in visited_nodes:
+
+                # append the node index to list of indexes
+                tour_nodes.append(curr_node)
+
+                # update current node
+                curr_node = curr_node.succ
+
+                # remove current node from visited
+                visited_nodes.remove(curr_node)
+
+            # append last index to close the tour
+            tour_nodes.append(curr_node)
+
+            # check if there are still nodes in the visited nodes set
+            # this will happen at unfeasible tours (like two subtours, instead of only one single tour)
+            if len(visited_nodes) > 0:
+
+                # get any unvisited node to continue the search
+                curr_node = visited_nodes.pop()
+
+        #  return the list of indexes
+        return tour_nodes
+
     def shuffle(self):
         """
         Shuffle the tour nodes creating a random tour and re-initializing the tour edges 
@@ -124,36 +191,101 @@ class Tour:
         # rebuild the edges after shuffling the nodes
         self.set_edges()
 
-    def get_tour_nodes(self):
+    def restore(self, swaps=None):
         """
-        Get the nodes inside the tour and add them sorted into a list of nodes. This is usefull to get the sequence of nodes inside the tour (without succ and pred properties, since this changes after improving a tour, for example) and use it for plot.
+        Restore an initial tour that passed through some 2-opt swaps by doing a certain amount of reversed swaps using the swap_stack. If number of swaps is not defined, the entire swap stack will be undone
 
-        :return: the list of node indexes
-        :rtype: list
+        :param swaps: the number of swaps to be undone
+        :type swaps: int
         """
 
-        # start node indexes and get the starting node
-        tour_nodes = []
-        curr_node = self.nodes[0]
+        # if swaps are not defined, the entire swap stack will be undone
+        if swaps == None:
+            swaps = len(self.swap_stack)
 
-        # loop through each tour node
-        while curr_node.succ != self.nodes[0]:
+        # looping until number of swaps are reached
+        for _ in range(swaps):
 
-            # append the node index to list of indexes
-            tour_nodes.append(curr_node)
+            # get last stack
+            curr_stack = self.swap_stack[-1]
 
-            # update current node
-            curr_node = curr_node.succ
+            # collect node values
+            t1 = curr_stack[0]
+            t2 = curr_stack[1]
+            t3 = curr_stack[2]
+            t4 = curr_stack[3]
 
-        # append last index to close the tour
-        tour_nodes.append(curr_node)
+            # collect the 2-Opt swap type made
+            swap_type = curr_stack[4]
 
-        #  return the list of indexes
-        return tour_nodes
+            # execute the reversed swap based on the swap operation
+            # swap is not recorded to the stack, since it is being undone
+            if (swap_type == "swap_feasible"):
+                self.swap_feasible(t4, t1, t2, t3, False, False)
+            elif (swap_type == "swap_unfeasible"):
+                self.swap_unfeasible(t4, t1, t2, t3, False, False)
+            elif (swap_type == "swap_node_between_t2_t3"):
+                self.swap_unfeasible(t4, t1, t2, t3, False, False)
+            elif (swap_type == "swap_node_between_t2_t3_reversed"):
+                self.swap_unfeasible(t4, t1, t2, t3, True, False)
+            elif (swap_type == "swap_feasible_reversed"):
+                self.swap_feasible(t4, t1, t2, t3, True, False)
 
-    def is_swap_valid(self, t1, t2, t3, t4):
+            # remove last swap
+            self.swap_stack.pop()
+
+        # loop through each applied swap and check if there's any swap that don't recompute the pos attribute. If so, set the pos attribute
+        for swap in self.swap_stack:
+            if swap[4] != "swap_feasible":
+                self.set_pos()
+                break
+
+    def between(self, from_node, between_node, to_node, use_pos_attr=False):
         """
-        Validate a 2Opt-Swap operation using reference nodes. Edge (t1,t2) and (t3,t4) are broken so that a relink of (t2,t3) and (t1,t4) is made, as shown below:
+        Validate if a specific node is between two other nodes. There are two methods of search:
+
+        1 - Using pos attribute: this is a fast search, but pos attribute must be correctly defined for the node segment being analyzed 
+        2 - Using pred/succ attribute: a slow search (requires to traverse through the nodes), but doesn't require nodes to have pos attribute defined (this is relevant at unfeasible swaps)
+
+        :param from_node: the starting node
+        :type from_node: Node
+        :param between_node: the node checked if between the other two nodes
+        :type between_node: Node
+        :param to_node: the ending node
+        :type to_node: Node
+        """
+
+        # using pos attribute
+        if use_pos_attr:
+
+            # this is the check where the segment from-to does not contain the breaking pos value
+            if from_node.pos <= to_node.pos:
+                # segment does not pass through the breaking pos value
+                return from_node.pos < between_node.pos and between_node.pos < to_node.pos
+            else:
+                # segment passes through the breaking pos value
+                return from_node.pos < between_node.pos or between_node.pos < to_node.pos
+
+        # using pred/succ attribute
+        else:
+
+            # get starting node
+            node = from_node.succ
+
+            # looping until to node is reached
+            while node != to_node:
+                # if between node is reached, return true
+                if node == between_node:
+                    return True
+                else:
+                    node = node.succ
+
+            # if between node was not found, returns false
+            return False
+
+    def is_swap_feasible(self, t1, t2, t3, t4):
+        """
+        Validate if a 2Opt-Swap operation performed into a feasible tour/subtour results in another feasible tour/subtour using reference nodes. Edge (t1,t2) and (t3,t4) are broken so that a relink of (t2,t3) and (t1,t4) is made, as shown below:
 
           t4  t3           t4   t3
           ()--()           ()   ()
@@ -163,9 +295,11 @@ class Tour:
           ()--()           ()   ()
           t2  t1           t2   t1
 
-        For a valid swap:
-        *1: the order of the nodes in the tour must be (t1,t2,t4,t3) in any direction (clockwise or counter clockwise). Notice that in the scheme above, if we had (t1,t2,t3,t4), the relink would result in 2 closed loops, which are invalid. Notice that if we switch t1 with t2 and t3 with t4, it still valid, the change was only made in the direction;
-        *2: t3 can't be a neighboor of t2. this would mean two sequential edges to be broken, which would lead to an invalid tour;
+        For a feasible swap:
+        *1: all nodes must be different from each other;
+        *2: the order of the nodes in the tour must be (t1,t2,t4,t3) in any direction (clockwise or counter clockwise). Notice that in the scheme above, if we had (t1,t2,t3,t4), the relink would result in 2 closed loops, which are unfeasible. Notice that if we switch t1 with t2 and t3 with t4, it still feasible, the change was only made in the direction.
+
+        * This function can be used into a subtour: when an unfeasible swap results in an unfeasible tour, there're two subtours that, isolated from each other, are valid subtours. This is relevant at the unfeasible search function (when node is between t1 and t4).
 
         :param t1: the tail node of the first broken edge
         :type t1: Node2D
@@ -175,16 +309,16 @@ class Tour:
         :type t3: Node2D
         :param t4: the head node of the second broken edge
         :type t4: Node2D
-        :return: a boolean indicating if swap is valid
+        :return: a boolean indicating if swap is valid and feasible
         :rtype: boolean
         """
 
-        # t3 can't be a neighboor of t2, otherwise the swap operation will result in an invalid tour (rule 2)
-        if (t3 == t2.pred or t3 == t2.succ):
+        # for a feasible swap, all nodes must be different from each other (rule 1)
+        if not (t1 != t2 and t1 != t3 and t1 != t4 and t2 != t3 and t2 != t4 and t3 != t4):
             return False
 
         # check t4 based on the orientation of the edge (t1,t2)
-        # for a valid swap, t4 can be validated using t1 and t2 orientation (rule 1)
+        # for a feasible swap, t4 can be validated using t1 and t2 orientation (rule 2)
         if t1.succ == t2:
             if t4 != t3.pred:
                 return False
@@ -192,20 +326,25 @@ class Tour:
             if t4 != t3.succ:
                 return False
 
-        # return true if no invalid swaps were found
+        # return true if swap is feasible
         return True
 
-    def swap_nodes(self, t1, t2, t3, t4):
+    def is_swap_unfeasible(self, t1, t2, t3, t4):
         """
-        Execute a 2Opt-Swap operation using reference nodes. Edge (t1,t2) and (t3,t4) are broken so that a relink of (t2,t3) and (t1,t4) is made, as shown below:
+        Validate if a 2Opt-Swap operation performed into a feasible tour results in an unfeasible tour using reference nodes. Edge (t1,t2) and (t3,t4) are broken so that a relink of (t2,t3) and (t1,t4) is made, as shown below:
 
-          t4  t3           t4   t3
+          t3  t4           t3   t4
           ()--()           ()   ()
-         /      \         /  \ /  \
-        ()      ()  -->  ()   X   ()
-         \      /         \  / \  /
+         /      \         / |   | \
+        ()      ()  -->  () |   | ()
+         \      /         \ |   | /
           ()--()           ()   ()
           t2  t1           t2   t1
+
+        For an unfeasible swap:
+        *1: all nodes must be different from each other;
+        *2: the order of the nodes in the tour must be (t1,t2,t3,t4) in any direction (clockwise or counter clockwise), resulting in two separated subtours when relinking the edges;
+        *3: each subtour must contain at least 3 nodes
 
         :param t1: the tail node of the first broken edge
         :type t1: Node2D
@@ -215,13 +354,57 @@ class Tour:
         :type t3: Node2D
         :param t4: the head node of the second broken edge
         :type t4: Node2D
-        :return: a boolean indicating if swap was performed
+        :return: a boolean indicating if swap is valid and unfeasible
         :rtype: boolean
         """
 
-        # checking if swap configuration is valid
-        if not self.is_swap_valid(t1, t2, t3, t4):
+        # for an unfeasilbe swap, all nodes must be different from each other (rule 1)
+        if not (t1 != t2 and t1 != t3 and t1 != t4 and t2 != t3 and t2 != t4 and t3 != t4):
             return False
+
+        # check t4 based on the orientation of the edge (t1,t2)
+        # for an unfeasible swap, t4 can be validated using t1 and t2 orientation (rule 2)
+        if t1.succ == t2:
+            if t4 == t3.pred:
+                return False
+        elif t1.pred == t2:
+            if t4 == t3.succ:
+                return False
+
+        # t3 can't be a neighbor of t2 or t4 be a neighbor of t1: this result in a subtour segment with only 2 nodes, which is invalid (rule 3)
+        if (t2.pred == t3 or t2.succ == t3 or t1.pred == t4 or t1.succ == t4):
+            return False
+
+        # return true if an unfeasible swap was found
+        return True
+
+    def swap_feasible(self, t1, t2, t3, t4, is_subtour=False, record=True):
+        """
+        Execute a 2Opt-Swap operation in a feasible tour/subtour resulting in another feasible tour/subtour. Edge (t1,t2) and (t3,t4) are broken so that a relink of (t2,t3) and (t1,t4) is made, as shown below:
+
+          t4  t3           t4   t3
+          ()--()           ()   ()
+         /      \         /  \ /  \
+        ()      ()  -->  ()   X   ()
+         \      /         \  / \  /
+          ()--()           ()   ()
+          t2  t1           t2   t1
+
+        * This function can be used into a subtour: when an unfeasible swap results in an unfeasible tour, there're two subtours that, isolated from each other, are valid subtours. This is relevant at the unfeasible search function (when node is between t1 and t4). When this function is applied to subtours, the pos attribute must not be recomputed.
+
+        :param t1: the tail node of the first broken edge
+        :type t1: Node2D
+        :param t2: the head node of the first broken edge
+        :type t2: Node2D
+        :param t3: the tail node of the second broken edge
+        :type t3: Node2D
+        :param t4: the head node of the second broken edge
+        :type t4: Node2D
+        :param is_subtour: a boolean indicating if swap is done into a subtour (from an unfeasible tour)
+        :type is_subtour: boolean
+        :param record: a boolean indicating if swap must be record into the swap stack
+        :type record: boolean
+        """
 
         # if t2 is not the successor of t1, invert t1 with t2 and t3 with t4
         # since the node reordering is always applied to t3 -> t1 segment, this is done so that the reordering loop will be done correctly.
@@ -264,9 +447,10 @@ class Tour:
             node.succ = node.pred
             node.pred = temp
 
-            # update node position
-            node.pos = pos
-            pos -= 1
+            # update node position only if is not a subtour
+            if not is_subtour:
+                node.pos = pos
+                pos -= 1
 
             # update node for next loop with the last successor node
             node = temp
@@ -277,8 +461,160 @@ class Tour:
         t1.pred = t4
         t4.succ = t1
 
-        # returns a boolean indicating the swap was done
-        return True
+        # update the swap stack
+        if record:
+            # the name is defined based on subtour parameter
+            if not is_subtour:
+                self.swap_stack.append((t1, t2, t3, t4, "swap_feasible"))
+            else:
+                self.swap_stack.append((t1, t2, t3, t4, "swap_feasible_reversed"))
+
+    def swap_unfeasible(self, t1, t2, t3, t4, reverse_subtour=False, record=True):
+        """
+        Execute a 2Opt-Swap operation in a feasible tour resulting in an unfeasible tour. Edge (t1,t2) and (t3,t4) are broken so that a relink of (t2,t3) and (t1,t4) is made, as shown below:
+
+          t3  t4           t3   t4
+          ()--()           ()   ()
+         /      \         / |   | \
+        ()      ()  -->  () |   | ()
+         \      /         \ |   | /
+          ()--()           ()   ()
+          t2  t1           t2   t1
+
+
+        * Because some unfeasible swaps may reverse the subtour direction, the reverse_subtour parameter is used to reverse back the segment, useful when undoing those swaps.
+
+        :param t1: the tail node of the first broken edge
+        :type t1: Node2D
+        :param t2: the head node of the first broken edge
+        :type t2: Node2D
+        :param t3: the tail node of the second broken edge
+        :type t3: Node2D
+        :param t4: the head node of the second broken edge
+        :type t4: Node2D
+        :param reverse_subtour: a boolean indicating if one sub-tour segment shall be reversed
+        :type reverse_subtour: boolean
+        :param record: a boolean indicating if swap must be record into the swap stack
+        :type record: boolean
+        """
+
+        # reassign is done based on the direction of t1-t2 nodes
+        if (t1.succ == t2):
+            temp = t3
+            t3 = t2
+            t2 = temp
+            temp = t4
+            t4 = t1
+            t1 = temp
+
+        # reassign the successor/predecessor values at each of the 4 reconnected nodes
+        t3.pred = t2
+        t2.succ = t3
+        t1.pred = t4
+        t4.succ = t1
+
+        # reverse the t1-t4 segment
+        # relevant when undoing unfeasible swap of a node between t2 and t3, when the swap reverses one of the segments
+        if reverse_subtour:
+
+            # start from node t4
+            node = t4
+
+            # loop until t1
+            while node.pred != t4:
+
+                # reverse the node pred/succ attribute
+                temp = node.pred
+                node.pred = node.succ
+                node.succ = temp
+
+                # update for next node
+                node = temp
+
+            # reverse t1
+            t1.pred = t1.succ
+            t1.succ = t4
+
+        # update the swap stack
+        if record:
+            self.swap_stack.append((t1, t2, t3, t4, "swap_unfeasible"))
+
+    def swap_node_between_t2_t3(self, t1, t4, t5, t6, record=True):
+        """
+        Execute a 2Opt-Swap operation from an unfeasible tour with node t5 (and thus also t6) located between nodes t2 and t3. The break of edge (t1,t4) opens one of the closed tour and  connecting t1-t6 and t4-t5 results into a new valid tour.
+
+        This function is written with reference nodes t5 and t6, but it works at any swap level if starting from an unfeasible tour. As an example, this function is used in LK algorithm to perform the swap of t7 (and thus also t8) between t2-t3.
+
+        :param t1: the tail node of the first broken edge
+        :type t1: Node2D
+        :param t4: the head node of the first broken edge
+        :type t4: Node2D
+        :param t5: the tail node of the second broken edge
+        :type t5: Node2D
+        :param t6: the head node of the second broken edge
+        :type t6: Node2D
+        :param record: a boolean indicating if swap must be record into the swap stack
+        :type record: boolean
+        """
+
+        # checking if t1-t4 is reversed (t4 = t1.pred) or not (t4 = t1.succ)
+        # this is required to check succ/pred sequences
+        t4_after_t1 = t1.succ == t4
+
+        # checking if t5-t6 is reversed (t6 = t5.pred) or not (t6 = t5.succ)
+        # this is required to check succ/pred sequences
+        t6_after_t5 = t5.succ == t6
+
+        # a boolean checking if segment must be reversed
+        # requires to reverse t5-t6 segment when (t1-t4-t5-t6) or (t4-t1-t6-t5)
+        # otherwise the tour (luckly) is in the correct sequence
+        reverse_subtour = t4_after_t1 != t6_after_t5
+
+        # apply the reverse loop
+        if (reverse_subtour):
+
+            # arranging the nodes for the reorder loop (t5-t6 segment)
+            # reorder is always going backwards (using pred attribute)
+            from_node = t6
+            to_node = t5
+            if t6_after_t5:
+                from_node = t5
+                to_node = t6
+
+            # loop reversing the segment
+            while (from_node != to_node):
+
+                # reverse the node pred/succ attribute and update for next node
+                temp = from_node.pred
+                from_node.pred = from_node.succ
+                from_node.succ = temp
+                from_node = temp
+
+            # reverse the last node
+            temp = to_node.pred
+            to_node.pred = to_node.succ
+            to_node.succ = temp
+
+        # reassign the swap nodes based on tour direction
+        if (t4_after_t1):
+            t1.succ = t6
+            t6.pred = t1
+            t5.succ = t4
+            t4.pred = t5
+        else:
+            t1.pred = t6
+            t6.succ = t1
+            t5.pred = t4
+            t4.succ = t5
+
+        # update the swap stack
+        if record:
+            # record also in the swap name if the reversed loop was applied or not
+            # this is relevant when undoing the swap
+            if reverse_subtour:
+                self.swap_stack.append((t1, t4, t5, t6, "swap_node_between_t2_t3_reversed"))
+            else:
+                self.swap_stack.append((t1, t4, t5, t6, "swap_node_between_t2_t3"))
 
     def __str__(self):
         """

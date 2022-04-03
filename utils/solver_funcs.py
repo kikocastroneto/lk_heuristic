@@ -111,14 +111,28 @@ def solve_tsp(tsp_file, solution_method, runs, logging_level):
 
     # create the initial tsp instance
     logger.debug("Creating TSP instance")
-    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, max_neighbors=5)
+    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4)
 
     # looping through each run
     for run in range(1, runs + 1):
 
         # shuffle the tour nodes
         tsp.tour.shuffle()
+
+        # initialize tour cost and swap stack
         tsp.tour.set_cost(tsp.cost_matrix)
+        tsp.tour.swap_stack = []
+
+        # initialize tsp solutions
+        tsp.solutions = set()
+
+        # initialize the close gains values
+        tsp.close_gains = []
+        tsp.best_close_gain = 0
+
+        # initialize the reduction edges
+        tsp.reduction_count = 0
+        tsp.reduction_edges = set(tsp.tour.edges)
 
         # execute the improvement method and timeit
         logger.debug("Starting improve method")
@@ -128,7 +142,7 @@ def solve_tsp(tsp_file, solution_method, runs, logging_level):
 
         # update best solution found so far (if current solution is the best)
         if tsp.tour.cost < best_cost:
-            best_tour = tsp.tour.get_tour_nodes()
+            best_tour = tsp.tour.get_nodes()
             best_cost = tsp.tour.cost
 
         # update mean cost value

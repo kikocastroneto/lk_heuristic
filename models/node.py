@@ -178,7 +178,7 @@ class Node3D(Node):
 
     def __hash__(self):
         """
-        Hashing Node3D object is required to allow comparison of Edge, which are elements made of Node3D. The hash is performed in the tuple of node x and y values
+        Hashing Node3D object is required to allow comparison of Edge, which are elements made of Node3D. The hash is performed in the tuple of node x, y and z values
         """
         return hash((self.x, self.y, self.z))
 
