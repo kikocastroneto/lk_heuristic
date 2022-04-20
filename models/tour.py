@@ -1,4 +1,3 @@
-from audioop import reverse
 from random import shuffle
 from models.edge import Edge
 
