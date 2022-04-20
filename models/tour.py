@@ -216,7 +216,7 @@ class Tour:
             t4 = curr_stack[3]
 
             # collect the 2-Opt swap type made
-            swap_type = curr_stack[4]
+            swap_type = curr_stack[-1]
 
             # execute the reversed swap based on the swap operation
             # swap is not recorded to the stack, since it is being undone
@@ -236,7 +236,7 @@ class Tour:
 
         # loop through each applied swap and check if there's any swap that don't recompute the pos attribute. If so, set the pos attribute
         for swap in self.swap_stack:
-            if swap[4] != "swap_feasible":
+            if swap[-1] != "swap_feasible":
                 self.set_pos()
                 break
 
@@ -377,6 +377,74 @@ class Tour:
 
         # return true if an unfeasible swap was found
         return True
+
+    def is_swap_double_bridge(self, t1, t2, t3, t4, t5, t6, t7, t8):
+        """
+        Validate if a 4Opt-Swap double bridge operation performed into a feasible tour results in another feasible tour using reference nodes and, if a double bridge is found, returns the tuple of nodes in the sequence that the double bridge node shall be executed. Edges (t1,t2), (t3,t4), (t5,t6), (t7,t8) are broken so that a relink of nodes is made, as shown below:
+
+            t3  t4             t3   t4
+            ()--()             ()   ()
+           /      \           / |   | \
+        t8()      ()t5     t8()-------()t5 
+          |        |   -->      |   |  
+        t7()      ()t6     t7()-------()t6 
+           \      /           \ |   | /
+            ()--()             ()   ()
+            t2  t1             t2   t1
+
+        *It is possible to notice the double bridge move is a combination of two unfeasible swaps for segments t1-t4 and t5-t8. Both of this moves isolated results in two separated segments, while combined together results in a feasible tour.
+
+        For an double bridge swap:
+        *1: all nodes must be different from each other;
+        *2: segment of 4 nodes t1-t4 and t5-t8 must result in an unfeasible swap 
+
+        :param t1: the tail node of the first broken edge
+        :type t1: Node2D
+        :param t2: the head node of the first broken edge
+        :type t2: Node2D
+        :param t3: the tail node of the second broken edge
+        :type t3: Node2D
+        :param t4: the head node of the second broken edge
+        :type t4: Node2D
+        :param t5: the tail node of the third broken edge
+        :type t5: Node2D
+        :param t6: the head node of the third broken edge
+        :type t6: Node2D
+        :param t7: the tail node of the fourth broken edge
+        :type t7: Node2D
+        :param t8: the head node of the fourth broken edge
+        :type t8: Node2D
+        :return: a tuple of nodes for the double bridge swap (or empty if double bridge swap was not found)
+        :rtype: tuple
+        """
+
+        # for a double bridge swap, all nodes must be different from each other (rule 1)
+        if not (t1 != t3 and t1 != t4 and t1 != t5 and t1 != t6 and t1 != t7 and t1 != t8 and t2 != t3 and t2 != t4 and t2 != t5 and t2 != t6 and t2 != t7 and t2 != t8 and t3 != t5 and t3 != t6 and t3 != t7 and t3 != t8 and t4 != t5 and t4 != t6 and t4 != t7 and t4 != t8 and t5 != t7 and t5 != t8 and t6 != t7 and t6 != t8):
+            return None
+
+        # getting the nodes in succ sequence
+        if t1.pred == t2:
+            temp = t2
+            t2 = t1
+            t1 = temp
+        if t3.pred == t4:
+            temp = t4
+            t4 = t3
+            t3 = temp
+        if t5.pred == t6:
+            temp = t6
+            t6 = t5
+            t5 = temp
+        if t7.pred == t8:
+            temp = t8
+            t8 = t7
+            t7 = temp
+
+        # get nodes in a sequence based on their position
+        nodes = sorted((t1, t3, t5, t7), key=lambda el: el.pos)
+
+        # return the nodes in the sequence for the double bridge swap
+        return (nodes[0], nodes[0].succ, nodes[2], nodes[2].succ, nodes[1], nodes[1].succ, nodes[3], nodes[3].succ)
 
     def swap_feasible(self, t1, t2, t3, t4, is_subtour=False, record=True):
         """
@@ -615,6 +683,80 @@ class Tour:
                 self.swap_stack.append((t1, t4, t5, t6, "swap_node_between_t2_t3_reversed"))
             else:
                 self.swap_stack.append((t1, t4, t5, t6, "swap_node_between_t2_t3"))
+
+    def swap_double_bridge(self, t1, t2, t3, t4, t5, t6, t7, t8, record=True):
+        """
+        Execute a 4Opt-Swap double bridge operation performed into a feasible tour resulting in another feasible tour using reference nodes. Edges (t1,t2), (t3,t4), (t5,t6), (t7,t8) are broken so that a relink of nodes is made, as shown below:
+
+            t3  t4             t3   t4
+            ()--()             ()   ()
+           /      \           / |   | \
+        t8()      ()t5     t8()-------()t5 
+          |        |   -->      |   |  
+        t7()      ()t6     t7()-------()t6 
+           \      /           \ |   | /
+            ()--()             ()   ()
+            t2  t1             t2   t1
+
+        :param t1: the tail node of the first broken edge
+        :type t1: Node2D
+        :param t2: the head node of the first broken edge
+        :type t2: Node2D
+        :param t3: the tail node of the second broken edge
+        :type t3: Node2D
+        :param t4: the head node of the second broken edge
+        :type t4: Node2D
+        :param t5: the tail node of the third broken edge
+        :type t5: Node2D
+        :param t6: the head node of the third broken edge
+        :type t6: Node2D
+        :param t7: the tail node of the fourth broken edge
+        :type t7: Node2D
+        :param t8: the head node of the fourth broken edge
+        :type t8: Node2D
+        :param record: a boolean indicating if swap must be record into the swap stack
+        :type record: boolean
+        """
+
+        # execute the first unfeasible swap
+        self.swap_unfeasible(t1, t2, t3, t4, False, False)
+
+        # the second unfeasible swap is done in such way that new tour does not require segment reordering
+        # checking direction of initial tour segment t1-t4
+        from_node = t4
+        to_node = t1
+        if t1.pred == t2:
+            from_node = t1
+            to_node = t4
+
+        # check if t5 is between t4 and t1 segment
+        # if not, reorder the nodes so that t5 is between t1-t4
+        if not self.between(from_node, t5, to_node):
+            temp = t5
+            t5 = t8
+            t8 = temp
+            temp = t6
+            t6 = t7
+            t7 = temp
+
+        # checking if t5-t6 and t7-t8 needs to be switched to match tour orientation
+        if (t1.succ == t2 and t5.pred == t6) or (t1.pred == t2 and t5.succ == t6):
+            temp = t5
+            t5 = t6
+            t6 = t5
+            temp = t7
+            t7 = t8
+            t8 = temp
+
+        # after reordering the nodes, the second unfeasible swap is performed
+        self.swap_unfeasible(t5, t6, t7, t8, False, False)
+
+        # update pos attribute
+        self.set_pos()
+
+        # update the swap stack
+        if record:
+            self.swap_stack.append((t1, t2, t3, t4, t5, t6, t7, t8, "swap_double_bridge"))
 
     def __str__(self):
         """

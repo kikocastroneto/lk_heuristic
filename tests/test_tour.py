@@ -845,3 +845,113 @@ class TestTour(unittest.TestCase):
         # compare the current nodes with initial nodes
         self.assertEqual(initial_preds, [node.pred for node in self.tour.nodes])
         self.assertEqual(initial_succs, [node.succ for node in self.tour.nodes])
+
+    def test_swap_double_bridge_normal(self):
+        """
+        Test the double bridge swap when all nodes are ordered exactly as needed to perform the operation
+        """
+
+        # execute the double bridge move
+        self.tour.swap_double_bridge(self.tour.nodes[5], self.tour.nodes[6], self.tour.nodes[11], self.tour.nodes[0], self.tour.nodes[2], self.tour.nodes[3], self.tour.nodes[9], self.tour.nodes[10])
+
+        # checking all nodes successor
+        self.assertEqual(self.tour.nodes[0].succ, self.tour.nodes[1])
+        self.assertEqual(self.tour.nodes[1].succ, self.tour.nodes[2])
+        self.assertEqual(self.tour.nodes[2].succ, self.tour.nodes[10])
+        self.assertEqual(self.tour.nodes[3].succ, self.tour.nodes[4])
+        self.assertEqual(self.tour.nodes[4].succ, self.tour.nodes[5])
+        self.assertEqual(self.tour.nodes[5].succ, self.tour.nodes[0])
+        self.assertEqual(self.tour.nodes[6].succ, self.tour.nodes[7])
+        self.assertEqual(self.tour.nodes[7].succ, self.tour.nodes[8])
+        self.assertEqual(self.tour.nodes[8].succ, self.tour.nodes[9])
+        self.assertEqual(self.tour.nodes[9].succ, self.tour.nodes[3])
+        self.assertEqual(self.tour.nodes[10].succ, self.tour.nodes[11])
+        self.assertEqual(self.tour.nodes[11].succ, self.tour.nodes[6])
+
+    def test_swap_double_bridge_reversed(self):
+        """
+        Test the double bridge swap when nodes to perform the move are reversed
+        """
+
+        # execute the double bridge move
+        self.tour.swap_double_bridge(self.tour.nodes[6], self.tour.nodes[5], self.tour.nodes[0], self.tour.nodes[11], self.tour.nodes[10], self.tour.nodes[9], self.tour.nodes[3], self.tour.nodes[2])
+
+        # checking all nodes successor
+        self.assertEqual(self.tour.nodes[0].succ, self.tour.nodes[1])
+        self.assertEqual(self.tour.nodes[1].succ, self.tour.nodes[2])
+        self.assertEqual(self.tour.nodes[2].succ, self.tour.nodes[10])
+        self.assertEqual(self.tour.nodes[3].succ, self.tour.nodes[4])
+        self.assertEqual(self.tour.nodes[4].succ, self.tour.nodes[5])
+        self.assertEqual(self.tour.nodes[5].succ, self.tour.nodes[0])
+        self.assertEqual(self.tour.nodes[6].succ, self.tour.nodes[7])
+        self.assertEqual(self.tour.nodes[7].succ, self.tour.nodes[8])
+        self.assertEqual(self.tour.nodes[8].succ, self.tour.nodes[9])
+        self.assertEqual(self.tour.nodes[9].succ, self.tour.nodes[3])
+        self.assertEqual(self.tour.nodes[10].succ, self.tour.nodes[11])
+        self.assertEqual(self.tour.nodes[11].succ, self.tour.nodes[6])
+
+    def test_swap_double_bridge_semi_normal(self):
+        """
+        Test the double bridge swap when nodes are in correct sequence but the second unfeasible swap is not correctly positioned (t5 is not between t4-t1 segment)
+        """
+
+        # execute the double bridge move
+        self.tour.swap_double_bridge(self.tour.nodes[5], self.tour.nodes[6], self.tour.nodes[11], self.tour.nodes[0], self.tour.nodes[9], self.tour.nodes[10], self.tour.nodes[2], self.tour.nodes[3])
+
+        # checking all nodes successor
+        self.assertEqual(self.tour.nodes[0].succ, self.tour.nodes[1])
+        self.assertEqual(self.tour.nodes[1].succ, self.tour.nodes[2])
+        self.assertEqual(self.tour.nodes[2].succ, self.tour.nodes[10])
+        self.assertEqual(self.tour.nodes[3].succ, self.tour.nodes[4])
+        self.assertEqual(self.tour.nodes[4].succ, self.tour.nodes[5])
+        self.assertEqual(self.tour.nodes[5].succ, self.tour.nodes[0])
+        self.assertEqual(self.tour.nodes[6].succ, self.tour.nodes[7])
+        self.assertEqual(self.tour.nodes[7].succ, self.tour.nodes[8])
+        self.assertEqual(self.tour.nodes[8].succ, self.tour.nodes[9])
+        self.assertEqual(self.tour.nodes[9].succ, self.tour.nodes[3])
+        self.assertEqual(self.tour.nodes[10].succ, self.tour.nodes[11])
+        self.assertEqual(self.tour.nodes[11].succ, self.tour.nodes[6])
+
+    def test_swap_double_bridge_inverted(self):
+        """
+        Test the double bridge swap when nodes are in incorrect sequence, needing to reverse the nodes before applying the swap
+        """
+
+        # execute the double bridge move
+        self.tour.swap_double_bridge(self.tour.nodes[6], self.tour.nodes[5], self.tour.nodes[0], self.tour.nodes[11], self.tour.nodes[2], self.tour.nodes[3], self.tour.nodes[9], self.tour.nodes[10])
+
+        # checking all nodes successor
+        self.assertEqual(self.tour.nodes[0].succ, self.tour.nodes[1])
+        self.assertEqual(self.tour.nodes[1].succ, self.tour.nodes[2])
+        self.assertEqual(self.tour.nodes[2].succ, self.tour.nodes[10])
+        self.assertEqual(self.tour.nodes[3].succ, self.tour.nodes[4])
+        self.assertEqual(self.tour.nodes[4].succ, self.tour.nodes[5])
+        self.assertEqual(self.tour.nodes[5].succ, self.tour.nodes[0])
+        self.assertEqual(self.tour.nodes[6].succ, self.tour.nodes[7])
+        self.assertEqual(self.tour.nodes[7].succ, self.tour.nodes[8])
+        self.assertEqual(self.tour.nodes[8].succ, self.tour.nodes[9])
+        self.assertEqual(self.tour.nodes[9].succ, self.tour.nodes[3])
+        self.assertEqual(self.tour.nodes[10].succ, self.tour.nodes[11])
+        self.assertEqual(self.tour.nodes[11].succ, self.tour.nodes[6])
+
+    def test_swap_double_bridge_fully_inverted(self):
+        """
+        Test the double bridge swap when nodes are in incorrect sequence, needing to reverse the nodes before applying the swap.
+        """
+
+        # execute the double bridge move
+        self.tour.swap_double_bridge(self.tour.nodes[6], self.tour.nodes[5], self.tour.nodes[0], self.tour.nodes[11], self.tour.nodes[9], self.tour.nodes[10], self.tour.nodes[2], self.tour.nodes[3])
+
+        # checking all nodes successor
+        self.assertEqual(self.tour.nodes[0].succ, self.tour.nodes[1])
+        self.assertEqual(self.tour.nodes[1].succ, self.tour.nodes[2])
+        self.assertEqual(self.tour.nodes[2].succ, self.tour.nodes[10])
+        self.assertEqual(self.tour.nodes[3].succ, self.tour.nodes[4])
+        self.assertEqual(self.tour.nodes[4].succ, self.tour.nodes[5])
+        self.assertEqual(self.tour.nodes[5].succ, self.tour.nodes[0])
+        self.assertEqual(self.tour.nodes[6].succ, self.tour.nodes[7])
+        self.assertEqual(self.tour.nodes[7].succ, self.tour.nodes[8])
+        self.assertEqual(self.tour.nodes[8].succ, self.tour.nodes[9])
+        self.assertEqual(self.tour.nodes[9].succ, self.tour.nodes[3])
+        self.assertEqual(self.tour.nodes[10].succ, self.tour.nodes[11])
+        self.assertEqual(self.tour.nodes[11].succ, self.tour.nodes[6])

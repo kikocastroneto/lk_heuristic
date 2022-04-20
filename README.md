@@ -16,12 +16,12 @@ Nodes are implemented as Doubly-Linked Lists, one of the structures mentioned by
 
 ### Refinements
 
-There are 4 refinements proposed in the 1973 article aiming to improve the algorithm performance. Items 1 and 2 in the list below were implemented in this package, while items 3 and 4 are still open for implementation.
+There are 4 refinements proposed in the 1973 article aiming to improve the algorithm performance, which were implemented in this packages:
 
  1. Avoid checkout time (by skipping repeated 'bad' tours).
  2. Lookahead (by selecting 'good' edges for swaps)
  3. Reduction (by keeping 'good' edges from being broken)
- 4. Non-Sequential exchanges (by allowing exchanges that does not form a tour)
+ 4. Non-Sequential exchanges (by executing the double-bridge 4-Opt move)
  
 ## How-to-use
 
@@ -118,6 +118,9 @@ Example:
 2022-02-06 12:04:47,032 [INFO] utils.solver_funcs: Exporting 'a280_2639.497.tsp' file to solutions folder
 ```
 
+## Unit Testing
+
+Initial unit tests are avaliable at tests folder. Most of the tests are related to the tsp objects (nodes, edges and tours) and its main functions, like tour swaps. 
 
 ## Plotting
 

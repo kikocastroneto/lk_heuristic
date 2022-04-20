@@ -10,4 +10,4 @@ from utils.solver_funcs import get_interactive_inputs, solve_tsp
 tsp_file, solution_method = get_interactive_inputs()
 
 # execute the solver using inputs
-solve_tsp(tsp_file, solution_method, 1, logging.DEBUG)
+solve_tsp(tsp_file, solution_method, 100, logging.INFO)

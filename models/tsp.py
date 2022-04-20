@@ -1,9 +1,9 @@
 import math
 import logging
+import random
 from itertools import permutations
 from models.edge import Edge
 from models.tour import Tour
-
 
 # create the logger for the module
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class Tsp:
     # this is required when computing the gain in "simmetric" tours, to avoid incorrect calculations when using just "> 0"
     gain_precision = 0.01
 
-    def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4):
+    def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4):
         """
         The TSP input is a list of nodes which will be used as input to build a tour and a cost function to build the cost matrix.
 
@@ -30,8 +30,10 @@ class Tsp:
         :type shuffle: boolean
         :param backtracking: the number of closest neighbors to use in each backtracking level.
         :type backtracking: tuple
-        :param reduction_level: the starting level where reducted edges will start being considered
+        :param reduction_level: the starting level in current optimization cycle where reducted edges will start being considered
         :type reduction_level: int
+        :param reduction_cycle: the number of optimization cycles when reducted edges will start being considered
+        :type reduction_cycle: int
         """
 
         # initialize nodes
@@ -43,6 +45,10 @@ class Tsp:
         # shuffle the tour nodes
         if shuffle:
             self.tour.shuffle()
+
+        # a boolean indicating if tour nodes shall be shuffled at every restart of the optimization loop
+        # shuffle will not be applied when a double bridge move is found using lk1 optimizer
+        self.shuffle = True
 
         # initialize the cost matrix after having the nodes initialized into the tour object using the defined cost_function
         self.cost_matrix = {}
@@ -73,16 +79,21 @@ class Tsp:
         # each value represent the number of neighbors to try in each search level
         self.backtracking = backtracking
 
-        # init the reduction starting level and count value and reduction edges set
+        # init the reduction starting level, starting cycle and reduction edges set
         # this set contains the non-intersected edges at a maximum reduction levels
-        # the set is initialized with the tour edges
+        # the set is initialized empty and populated after first local optima is found
         self.reduction_level = reduction_level
-        self.reduction_count = 0
-        self.reduction_edges = set(self.tour.edges)
+        self.reduction_cycle = reduction_cycle
+        self.reduction_edges = set()
 
-        # gains values collected during the search and the best gain value
+        # init the improvement cycles count, updated everytime a local optima is found
+        # this parameter is only relevant when running many improvement cycles, used to apply reduction and double bridge moves
+        self.cycles = 0
+
+        # gains values collected during the search, the best gain value and the double bridge gain
         self.close_gains = []
         self.best_close_gain = 0
+        self.double_bridge_gain = 0
 
     def set_cost_matrix(self, cost_func):
         """
@@ -172,9 +183,9 @@ class Tsp:
 
         The search store both the gain value of closing the loop and the swap memory of the executed swaps. This memory is used when exiting the recursive call, so that is possible to select the best gain found in the search by undoing the executed swaps until the best gain position.
 
-        This function may be called from the unfeasible swap function. In this case, the starting swap function will be a special function that turns an unfeasible function into a feasible one. 
+        This function may be called from the unfeasible swap function. In this case, the starting swap function will be a special function that turns an unfeasible tour into a feasible one. 
 
-        :param level: the current level of the search to compare with backtracking levels
+        :param level: the current level of the search to compare with backtracking levels and reduction level
         :type level: int
         :param gain: the current gain from last LK step
         :type gain: float
@@ -201,8 +212,9 @@ class Tsp:
         broken_cost = self.cost_matrix[(t3.id, t4.id)]
 
         # apply the reduction refinement from LK Paper
-        # if xi in reduction_edges just exit the function
-        if (self.reduction_count >= self.reduction_level and broken_edge in self.reduction_edges):
+        # reduction is not applied in current optimization cycle if level is greater than a certain level
+        # reduction is not applied if a certain amount of optimization cycles were not run yet
+        if (level >= self.reduction_level and self.cycles <= self.reduction_cycle and broken_edge in self.reduction_edges):
             return
 
         # update the sets of broken and joined edges using the swap nodes
@@ -330,8 +342,13 @@ class Tsp:
         self.tour.swap_unfeasible(t1, t2, t3, t4)
         self.close_gains.append(-1)
 
+        # get the backtracking at second level
+        curr_backtracking = 1
+        if (len(self.backtracking) - 1 >= 1):
+            curr_backtracking = self.backtracking[1]
+
         # looking for the best neighbors of t4 at second level of backtracking
-        for (t5, t6), _ in self.get_best_neighbors(t4)[:self.backtracking[1]]:
+        for (t5, t6), _ in self.get_best_neighbors(t4)[:curr_backtracking]:
 
             # set y2 edge
             joined_edge_1 = Edge(t4, t5)
@@ -378,8 +395,13 @@ class Tsp:
                     # checking if t5 swap is feasible
                     if (self.tour.is_swap_feasible(t1, t4, t5, t6)):
 
-                        # when looking for (t7,t8) search level = 3, so theres's no backtracking (t7 is selected by the only best neighbor)
-                        for (t7, t8), _ in self.get_best_neighbors(t6)[:1]:
+                        # get the backtracking at third level
+                        curr_backtracking = 1
+                        if (len(self.backtracking) - 1 >= 2):
+                            curr_backtracking = self.backtracking[2]
+
+                        # looking for (t7,t8)
+                        for (t7, t8), _ in self.get_best_neighbors(t6)[:curr_backtracking]:
 
                             # set y3 edge
                             joined_edge_2 = Edge(t6, t7)
@@ -450,6 +472,87 @@ class Tsp:
         # if no improvement was found in the unfeasible search, undo the unfeasible swap
         self.tour.restore()
 
+    def lk1_double_bridge_search(self, max_tests=100):
+        """
+        Execute a random search for a double bridge move that is feasible and results in a better tour. If this double bridge move is found, the move is executed, tour edges are updated and the double bridge gain for this move is stored into class variable
+
+        :param max_tests: the maximum number of double bridge tests to be made
+        :type max_tests: int
+        :return: the execution of the double bridge move
+        :rtype: None
+        """
+
+        # getting the edges that can be broken (using only edges not in reduction set)
+        search_edges = list(self.tour.edges.difference(self.reduction_edges))
+
+        # the double bridge swap requires 4 edges
+        if len(search_edges) >= 4:
+
+            # loop until max number of tests are reached
+            for _ in range(max_tests):
+
+                # shuffle the edges
+                random.shuffle(search_edges)
+
+                # get the broken edges
+                broken_edge_1 = search_edges[0]
+                broken_edge_2 = search_edges[1]
+                broken_edge_3 = search_edges[2]
+                broken_edge_4 = search_edges[3]
+
+                # try to get the double bridge swap configuration
+                double_bridge_nodes = self.tour.is_swap_double_bridge(broken_edge_1.n1, broken_edge_1.n2, broken_edge_2.n1, broken_edge_2.n2, broken_edge_3.n1, broken_edge_3.n2, broken_edge_4.n1, broken_edge_4.n2)
+
+                # if configuration is found continue the double bridge move
+                if double_bridge_nodes:
+
+                    # get all nodes of the swap operation
+                    t1 = double_bridge_nodes[0]
+                    t2 = double_bridge_nodes[1]
+                    t3 = double_bridge_nodes[2]
+                    t4 = double_bridge_nodes[3]
+                    t5 = double_bridge_nodes[4]
+                    t6 = double_bridge_nodes[5]
+                    t7 = double_bridge_nodes[6]
+                    t8 = double_bridge_nodes[7]
+
+                    # compute the broken costs
+                    broken_cost_1 = self.cost_matrix[(t1.id, t2.id)]
+                    broken_cost_2 = self.cost_matrix[(t3.id, t4.id)]
+                    broken_cost_3 = self.cost_matrix[(t5.id, t6.id)]
+                    broken_cost_4 = self.cost_matrix[(t7.id, t8.id)]
+
+                    # compute the joined costs
+                    joined_cost_1 = self.cost_matrix[(t1.id, t4.id)]
+                    joined_cost_2 = self.cost_matrix[(t2.id, t3.id)]
+                    joined_cost_3 = self.cost_matrix[(t5.id, t8.id)]
+                    joined_cost_4 = self.cost_matrix[(t6.id, t7.id)]
+
+                    # compute the gain
+                    gain = (broken_cost_1 + broken_cost_2 + broken_cost_3 + broken_cost_4) - (joined_cost_1 + joined_cost_2 + joined_cost_3 + joined_cost_4)
+
+                    # checking if the gain is positive
+                    if (gain > self.gain_precision):
+
+                        # execute double bridge swap
+                        self.tour.swap_double_bridge(t1, t2, t3, t4, t5, t6, t7, t8)
+
+                        # update the double bridge gain
+                        self.double_bridge_gain = gain
+
+                        # update tour edges
+                        self.tour.edges.remove(Edge(t1, t2))
+                        self.tour.edges.remove(Edge(t3, t4))
+                        self.tour.edges.remove(Edge(t5, t6))
+                        self.tour.edges.remove(Edge(t7, t8))
+                        self.tour.edges.add(Edge(t1, t4))
+                        self.tour.edges.add(Edge(t2, t3))
+                        self.tour.edges.add(Edge(t5, t8))
+                        self.tour.edges.add(Edge(t6, t7))
+
+                        # break the loop
+                        break
+
     def lk1_main(self):
         """
         Execute the main loop of LK Heuristic to optimize the tour. This is a single run of LK loop, which tries to find a better tour considering current tour being analyzed.
@@ -472,10 +575,6 @@ class Tsp:
                 broken_edge = Edge(t1, t2)
                 broken_cost = self.cost_matrix[(t1.id, t2.id)]
 
-                # apply the reduction refinement from LK Paper (refinement 2.C in LK paper)
-                if (self.reduction_count >= self.reduction_level and broken_edge in self.reduction_edges):
-                    continue
-
                 # loop through the best possible nodes (t3,t4) from t2 instead of looping through all nodes. The number of best nodes is defined by the backtracking parameter.
                 # this is step 3 and 6(c) in LK Paper (with additional lookahead refinement - 2.B in LK paper)
                 # there's also step 4(a) in the get best neighbors, since the function checks if swap is valid for the nodes t1,t2,t3,t4
@@ -497,11 +596,6 @@ class Tsp:
                         broken_edges = set()
                         joined_edges = set()
 
-                        # reset the swap stack and gain objects before the search loop
-                        self.tour.swap_stack.clear()
-                        self.close_gains.clear()
-                        self.best_close_gain = 0
-
                         # execute the search loop
                         # if swap is feasible, execute the normal search
                         # if swap is unfeasible (2 separated tours), execute specific search from step 6(b) in LK Paper
@@ -512,6 +606,7 @@ class Tsp:
 
                         # check if a new gain was found
                         if self.close_gains:
+
                             # check if best gain is positive
                             # this is step 5 of LK Paper
                             if (max(self.close_gains) > 0):
@@ -531,33 +626,23 @@ class Tsp:
                                 # undo executed swaps until best gain index
                                 self.tour.restore((len(self.close_gains) - 1) - best_index)
 
-                                # sanity check (remove in the future)
-                                test_edges = set(self.tour.edges)
-                                self.tour.set_edges()
-                                if (test_edges != self.tour.edges):
-                                    print("processing error: new tour edges are incorrect: ")
-                                    print(self.tour.edges - test_edges)
+                                # compute the new cost for the new tour
+                                self.tour.set_cost(self.cost_matrix)
 
-                                # a sanity check that the difference in old and new cost matches the delta gain value
-                                old_cost = self.tour.cost
-                                self.tour.set_cost(self.cost_matrix)  # compute the new cost for the new tour
-                                new_cost = self.tour.cost
-                                diff = abs(old_cost - new_cost - max(self.close_gains))
-                                if diff > self.gain_precision:
-                                    logger.debug("processing error: delta gain is incorrect")
-
-                                # update the reduction edges by intersecting reduction edges with new tour edges and the reduction count is incremented
-                                self.reduction_edges = self.reduction_edges.intersection(self.tour.edges)
-                                self.reduction_count += 1
-
-                                # add the solution string to the set (indirect and reversed order)
+                                # add the solution string to the set (direct and reversed order)
                                 self.solutions.add(hash(tuple([node.succ.id for node in self.tour.nodes])))
                                 self.solutions.add(hash(tuple([node.pred.id for node in self.tour.nodes])))
+
+                                # reset close gains
+                                self.close_gains.clear()
 
                                 # return true if improvement was found
                                 return True
 
                             else:
+
+                                # reset close gains
+                                self.close_gains.clear()
 
                                 # if best gain found during search is negative, restore the initial tour (since no improvement was found, but swaps were made)
                                 self.tour.restore()
@@ -567,14 +652,21 @@ class Tsp:
 
     def lk1_improve(self):
         """
-        The improve loop using Lin-Kernighan Heuristic. The loop calls main LK optimizer everytime a better tour is found (which will try to optimize the new best tour using the same optimizer). The loop ends when no improvement is found, such that current tour will be the local optimal
+        The improve loop using Lin-Kernighan Heuristic. The loop calls main LK optimizer everytime a better tour is found (which will try to optimize the new best tour using the same optimizer). The loop ends when no improvement is found, such that current tour will be the local optimal.
+
+        After a local optimal is found, the preparation for 2 refinements are done:
+        *for reduction refinement, edges of new tour is intersected with last tour edges. The intersection is used for the refinement during the main improvement loop.
+        *for double-bridge refinement, after a certain amount of improvement cycles are run, the non-reduction edges are used to perform a search for a double-bridge move
         """
 
-        # number of tours tested
+        # number of new tours achieved
         tour_count = 1
 
         # boolean checking if a improved tour was found
         improved = True
+
+        # log the starting tour cost
+        logger.debug(f"Starting tour cost: {self.tour.cost:.3f}")
 
         # loop until no improvement is found at TSP tour
         # this is the step 5 in LK Paper
@@ -583,12 +675,50 @@ class Tsp:
             # compute the improvement
             improved = self.lk1_main()
 
+            # get executed swaps count
+            total_swaps = len(self.tour.swap_stack)
+            feasible_swaps = len([swap for swap in self.tour.swap_stack if swap[-1] == "swap_feasible"])
+            unfeasible_swaps = len([swap for swap in self.tour.swap_stack if swap[-1] != "swap_feasible"])
+
             # log the current tour cost
-            logger.debug(
-                f"Current tour '{tour_count}' cost: {self.tour.cost:.3f} / gain: {self.best_close_gain:.3f} / swaps: {len(self.tour.swap_stack)} / feasible swaps: {len([swap for swap in self.tour.swap_stack if swap[4] == 'swap_feasible'])} / unfeasible swaps: {len([swap for swap in self.tour.swap_stack if swap[4] != 'swap_feasible'])}")
+            logger.debug(f"Current tour '{tour_count}' cost: {self.tour.cost:.3f} / gain: {self.best_close_gain:.3f} / swaps: {total_swaps} / feasible swaps: {feasible_swaps} / unfeasible swaps: {unfeasible_swaps}")
 
             # update tour count
             tour_count += 1
+
+            # reset tsp parameters for next iteration
+            self.tour.swap_stack.clear()
+            self.best_close_gain = 0
+
+        # update improvement cycle count
+        self.cycles += 1
+
+        # initialize or update the reduction edges by intersecting reduction edges with new tour edges
+        self.reduction_edges = set(self.tour.edges) if self.cycles == 1 else self.reduction_edges.intersection(self.tour.edges)
+
+        # execute the double bridge refinement after certain amount of optimization cycles
+        if self.cycles >= self.reduction_cycle:
+
+            # search for a double bridge move
+            self.lk1_double_bridge_search()
+
+            # check if a good double bridge move was found
+            if (self.double_bridge_gain > 0):
+
+                # log the current tour cost
+                logger.info(
+                    f"Double bridge move found: cost: {self.tour.cost:.3f} / gain: {self.double_bridge_gain:.3f}")
+
+                # reset the double brige gain
+                self.double_bridge_gain = 0
+
+                # reset the shuffle value (for next iteration the new double bridge tour will be used)
+                self.shuffle = False
+
+            else:
+
+                # if double bridge was not found, next improvement loop will shuffle the tour
+                self.shuffle = True
 
     def lk2_select_broken_edge(self, gain, t1, t2, t3, t4, broken_edges, joined_edges):
         """
@@ -788,6 +918,9 @@ class Tsp:
 
         # boolean checking if a improved tour was found
         improved = True
+
+        # log the starting tour cost
+        logger.debug(f"Starting tour cost: {self.tour.cost:.3f}")
 
         # loop until no improvement is found at TSP tour
         while improved:
