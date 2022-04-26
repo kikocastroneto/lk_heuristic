@@ -59,7 +59,7 @@ In silent mode all args are passed to the solve function so that no interaction 
 
 ```
 from lk_heuristic.utils.solver_funcs import solve
-solve(tsp_file="C:/temp/test.tsp", solution_method="lk_improve", runs=50, logging_level=20)
+solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, logging_level=20)
 ```
 
 ### Example of an interactive run 

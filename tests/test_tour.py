@@ -1,6 +1,6 @@
 import unittest
-from models.node import Node2D
-from models.tour import Tour
+from lk_heuristic.models.node import Node2D
+from lk_heuristic.models.tour import Tour
 
 
 class TestTour(unittest.TestCase):

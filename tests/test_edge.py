@@ -1,6 +1,6 @@
 import unittest
-from models.node import Node2D, Node3D
-from models.edge import Edge
+from lk_heuristic.models.node import Node2D, Node3D
+from lk_heuristic.models.edge import Edge
 
 
 class TestEdge(unittest.TestCase):

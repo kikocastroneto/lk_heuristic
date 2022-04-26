@@ -1,5 +1,5 @@
 import unittest
-from models.node import Node2D, Node3D
+from lk_heuristic.models.node import Node2D, Node3D
 
 
 class TestNode(unittest.TestCase):
