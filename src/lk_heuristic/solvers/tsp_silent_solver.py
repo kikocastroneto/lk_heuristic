@@ -1,10 +1,5 @@
-# add project path to sys.path so that imports can be made
-# remove this after setting the package as a module
-import sys
-import os
 import argparse
-sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
-from utils.solver_funcs import solve_tsp
+from lk_heuristic.utils.solver_funcs import solve_tsp
 
 # set parser options (for silent execution) and get the args from execution
 parser = argparse.ArgumentParser(description="Parse the tsp file and the solution method")

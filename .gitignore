@@ -1,5 +1,17 @@
 # ignore pycache files
 *pyc
 
+# ignore dist binaries
+*dist
+
+# ignore package info files
+*.egg-info
+
 # ignore vscode option files
 *.vscode
+
+# ignore plots html files
+**/plots/*.html
+
+# ignore existing tsp solution files
+**/solutions/*.tsp

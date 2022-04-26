@@ -1,5 +1,5 @@
-from models import Node2D, Node3D
 import logging
+from lk_heuristic.models.node import Node2D, Node3D
 
 # create a logger object
 logger = logging.getLogger(__name__)

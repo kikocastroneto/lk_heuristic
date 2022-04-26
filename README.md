@@ -1,6 +1,10 @@
 # Lin-Kernighan Heuristic in Python
 
-This package contains the implementation of *Lin-Kernighan Heuristic* as the main solver for Travelling Salesman Problem (**TSP**) instances. 
+This package contains the implementation of *Lin-Kernighan Heuristic* as the main solver for Travelling Salesman Problem (**TSP**) instances. Installation can be made via the pip command:
+
+```
+pip install lk_heuristic
+```
 
 ## Implementation Remarks
 
@@ -42,28 +46,21 @@ Methods 1 and 2 were implemented mostly for testing reasons and some performance
 
 ### Interactive Mode
 
-To run the solver in interactive mode, follow these steps:
+Interactive mode will ask users to select the input file and a solver function, when no args are supplied to the solve function, like shown in the sample code below:
 
-  1. Add the desired .tsp file in 'samples' folder.
-  2. Run tsp_interactive_solver.py file (`python tsp_interactive_solver.py`).
-  3. Enter the number of the tsp file to be used
-  4. Enter the number of the solution method to be used
-  5. A single improve run is executed
-  6. After improve has finished, a .tsp file is exported at 'solutions' folder
+``` 
+from lk_heuristic.utils.solver_funcs import solve
+solve()
+```
 
 ### Silent Mode
 
-To run the solver in silent mode, follow these steps:
+In silent mode all args are passed to the solve function so that no interaction is required through the shell, like shown in the sample code below:
 
-  1. Run tsp_silent_solver.py file with the following args:
-   - --tsp_file: the path to .tsp file 
-   - --solution_method: one of the possible solvers ('bf_improve', 'nn_improve', 'lk_improve')
-   - --runs: the number of improve cycles to run
-   - --logging_level: the level of progress details
-  2. After improve has finished, a .tsp file is exported at 'solutions' folder with best solution found of all runs
-
-Example: 
-  `python tsp_silent_solver.py --tsp_file "C:/temp/test.tsp" --solution_method "lk_improve" --runs 50 --logging_level 20`
+```
+from lk_heuristic.utils.solver_funcs import solve
+solve(tsp_file="C:/temp/test.tsp", solution_method="lk_improve", runs=50, logging_level=20)
+```
 
 ### Example of an interactive run 
 
@@ -84,49 +81,46 @@ Example:
 [3] - lk2_improve
 --> Select one of the solution methods: 2
 
-2022-03-01 09:35:26,279 [INFO] utils.solver_funcs: Importing .tsp file 'hexagon_2d.tsp'
-2022-03-01 09:35:26,280 [INFO] utils.solver_funcs: Using 'cost_func_2d' for edge type 'EUC_2D'
-2022-03-01 09:35:26,281 [DEBUG] utils.solver_funcs: Creating TSP instance
-2022-03-01 09:35:26,282 [DEBUG] utils.solver_funcs: Starting improve method
-2022-03-01 09:35:26,284 [DEBUG] models.tsp: Current tour '1' cost: 24.416
-2022-03-01 09:35:26,285 [DEBUG] models.tsp: Current tour '2' cost: 20.180
-2022-03-01 09:35:26,286 [DEBUG] models.tsp: Current tour '3' cost: 17.529
-2022-03-01 09:35:26,287 [DEBUG] models.tsp: Current tour '4' cost: 16.529
-2022-03-01 09:35:26,288 [DEBUG] models.tsp: Current tour '5' cost: 15.913
-2022-03-01 09:35:26,295 [DEBUG] models.tsp: Current tour '6' cost: 10.657
-2022-03-01 09:35:26,297 [DEBUG] models.tsp: Current tour '7' cost: 9.657
-2022-03-01 09:35:26,299 [DEBUG] models.tsp: Current tour '8' cost: 9.657
-2022-03-01 09:35:26,300 [INFO] utils.solver_funcs: [Run:1] --> Cost: 9.657 / Best: 9.657 / Mean: 9.657 (0.017s)
-2022-03-01 09:35:26,300 [INFO] utils.solver_funcs: Exporting 'hexagon_2d_9.657.tsp' file to solutions folder
+2022-04-26 19:32:02,850 [INFO] lk_heuristic.utils.solver_funcs: Importing .tsp file 'hexagon_2d.tsp'
+2022-04-26 19:32:02,853 [INFO] lk_heuristic.utils.solver_funcs: Using 'euc_2d' for edge type 'EUC_2D'
+2022-04-26 19:32:02,854 [INFO] lk_heuristic.utils.solver_funcs: Creating TSP instance
+2022-04-26 19:32:02,859 [INFO] lk_heuristic.utils.solver_funcs: Starting improve loop
+2022-04-26 19:32:02,861 [DEBUG] lk_heuristic.models.tsp: Starting tour cost: 214.996
+2022-04-26 19:32:02,862 [DEBUG] lk_heuristic.models.tsp: Current tour '1' cost: 167.055 / gain: 47.942 / swaps: 1 / feasible swaps: 1 / unfeasible swaps: 0
+2022-04-26 19:32:02,864 [DEBUG] lk_heuristic.models.tsp: Current tour '2' cost: 152.913 / gain: 14.142 / swaps: 2 / feasible swaps: 0 / unfeasible swaps: 2
+2022-04-26 19:32:02,866 [DEBUG] lk_heuristic.models.tsp: Current tour '3' cost: 123.071 / gain: 29.841 / swaps: 2 / feasible swaps: 2 / unfeasible swaps: 0
+2022-04-26 19:32:02,870 [DEBUG] lk_heuristic.models.tsp: Current tour '4' cost: 100.711 / gain: 22.361 / swaps: 2 / feasible swaps: 2 / unfeasible swaps: 0
+2022-04-26 19:32:02,874 [DEBUG] lk_heuristic.models.tsp: Current tour '5' cost: 100.711 / gain: 0.000 / swaps: 0 / feasible swaps: 0 / unfeasible swaps: 0
+2022-04-26 19:32:02,875 [INFO] lk_heuristic.utils.solver_funcs: [Run:1] --> Cost: 100.711 / Best: 100.711 / Mean: 100.711 (0.014s)
+2022-04-26 19:32:02,876 [INFO] lk_heuristic.utils.solver_funcs: Exporting 'hexagon_2d_100.711.tsp' file to solutions 
+folder
 ```
 
 ### Example of a silent run 
 
 ```
-2022-02-06 12:04:19,830 [INFO] utils.solver_funcs: Importing .tsp file 'a280.tsp'
-2022-02-06 12:04:19,840 [INFO] utils.solver_funcs: Using 'cost_func_2d' for edge type 'EUC_2D'
-2022-02-06 12:04:22,707 [INFO] utils.solver_funcs: [Run:1] --> Cost: 2823.337 / Best: 2823.337 / Mean: 2823.337 (2.709s)
-2022-02-06 12:04:25,009 [INFO] utils.solver_funcs: [Run:2] --> Cost: 2821.078 / Best: 2821.078 / Mean: 2822.207 (2.289s)
-2022-02-06 12:04:27,422 [INFO] utils.solver_funcs: [Run:3] --> Cost: 2702.677 / Best: 2702.677 / Mean: 2782.364 (2.403s)
-2022-02-06 12:04:29,818 [INFO] utils.solver_funcs: [Run:4] --> Cost: 2673.830 / Best: 2673.830 / Mean: 2755.230 (2.391s)
-2022-02-06 12:04:32,355 [INFO] utils.solver_funcs: [Run:5] --> Cost: 2984.470 / Best: 2673.830 / Mean: 2801.078 (2.522s)
-2022-02-06 12:04:35,237 [INFO] utils.solver_funcs: [Run:6] --> Cost: 2781.378 / Best: 2673.830 / Mean: 2797.795 (2.876s)
-2022-02-06 12:04:37,571 [INFO] utils.solver_funcs: [Run:7] --> Cost: 2743.860 / Best: 2673.830 / Mean: 2790.090 (2.325s)
-2022-02-06 12:04:40,421 [INFO] utils.solver_funcs: [Run:8] --> Cost: 2724.558 / Best: 2673.830 / Mean: 2781.898 (2.843s)
-2022-02-06 12:04:43,899 [INFO] utils.solver_funcs: [Run:9] --> Cost: 2639.497 / Best: 2639.497 / Mean: 2766.076 (3.473s)
-2022-02-06 12:04:47,032 [INFO] utils.solver_funcs: [Run:10] --> Cost: 2943.038 / Best: 2639.497 / Mean: 2783.772 (3.125s)
-2022-02-06 12:04:47,032 [INFO] utils.solver_funcs: Exporting 'a280_2639.497.tsp' file to solutions folder
+2022-04-26 19:35:41,423 [INFO] lk_heuristic.utils.solver_funcs: Importing .tsp file 'test.tsp'
+2022-04-26 19:35:41,424 [INFO] lk_heuristic.utils.solver_funcs: Using 'euc_2d' for edge type 'EUC_2D'
+2022-04-26 19:35:41,425 [INFO] lk_heuristic.utils.solver_funcs: Creating TSP instance
+2022-04-26 19:35:41,426 [INFO] lk_heuristic.utils.solver_funcs: Starting improve loop
+2022-04-26 19:35:41,431 [INFO] lk_heuristic.utils.solver_funcs: [Run:1] --> Cost: 100.711 / Best: 100.711 / Mean: 100.711 (0.005s)
+2022-04-26 19:35:41,441 [INFO] lk_heuristic.utils.solver_funcs: [Run:2] --> Cost: 100.711 / Best: 100.711 / Mean: 100.711 (0.009s)
+2022-04-26 19:35:41,445 [INFO] lk_heuristic.utils.solver_funcs: [Run:3] --> Cost: 100.711 / Best: 100.711 / Mean: 100.711 (0.003s)
+2022-04-26 19:35:41,450 [INFO] lk_heuristic.utils.solver_funcs: [Run:4] --> Cost: 100.711 / Best: 100.711 / Mean: 100.711 (0.004s)
+2022-04-26 19:35:41,455 [INFO] lk_heuristic.utils.solver_funcs: [Run:5] --> Cost: 100.711 / Best: 100.711 / Mean: 100.711 (0.004s)
+2022-04-26 19:35:41,456 [INFO] lk_heuristic.utils.solver_funcs: Exporting 'test_100.711.tsp' file to solutions folder
 ```
-
-## Unit Testing
-
-Initial unit tests are avaliable at tests folder. Most of the tests are related to the tsp objects (nodes, edges and tours) and its main functions, like tour swaps. 
 
 ## Plotting
 
 The main output from the improvement process is the .tsp file with nodes sorted as in the optimal tour found at improvement procedure. User can use this file and parse it to his preferred visualization tool. Although, a simple tool was designed to display 2D and 3D plots using [Plotly][plotly].
 
 In plot_funcs.py, there are two functions to plot either 2D or 3D graphs using as input the .tsp file. After running those functions, a html file is exported at 'plots' folder, which can be viewed using the browser.
+
+```
+from lk_heuristic.utils.plot_funcs import plot_tsp_2d
+plot_tsp_2d("src/lk_heuristic/solutions/a280_2593.558.tsp")
+```
 
 Example of the plot result using a280.tsp instance
 ![plot_sample.png](plot_sample.png)

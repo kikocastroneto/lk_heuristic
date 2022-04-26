@@ -1,11 +1,6 @@
-
-# add project path to sys.path so that imports can be made
-# remove this after setting the package as a module
-import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(__file__, "../../")))
 import plotly.graph_objects as go
-from io_funcs import import_tsp_file
+from lk_heuristic.utils.io_funcs import import_tsp_file
 
 # get the directory of this file and setup the "plots" dir
 file_dir = os.path.dirname(os.path.realpath(__file__))

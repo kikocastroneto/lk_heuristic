@@ -2,12 +2,9 @@ import os
 import logging
 import math
 import time
-from models import Tsp
-from utils.cost_funcs import cost_funcs
-from utils.io_funcs import import_tsp_file, export_tsp_file
-
-# create the logger
-logger = logging.getLogger(__name__)
+from lk_heuristic.models.tsp import Tsp
+from lk_heuristic.utils.cost_funcs import cost_funcs
+from lk_heuristic.utils.io_funcs import import_tsp_file, export_tsp_file
 
 # get the directory of this file and setup the "samples" and "solutions" dir
 file_dir = os.path.dirname(os.path.realpath(__file__))
@@ -79,9 +76,9 @@ def get_interactive_inputs():
     return (tsp_file, solution_method)
 
 
-def solve_tsp(tsp_file, solution_method, runs, logging_level):
+def solve(tsp_file=None, solution_method=None, runs=1, logging_level=logging.DEBUG):
     """
-    Solve a specific tsp problem a certain amount of times using the tsp_file input and the desired solution method. The best solution is parsed to .tsp file and exported to solution folder. 
+    Solve a specific tsp problem a certain amount of times using the tsp_file input and the desired solution method. If this functions is called with no supplied inputs, the interactive inputs will be collected through the terminal. The best solution is parsed to .tsp file and exported to solution folder. 
 
     :param tsp_file: the .tsp file to be solved
     :type tsp_file: str
@@ -93,8 +90,13 @@ def solve_tsp(tsp_file, solution_method, runs, logging_level):
     :type logging_level: int
     """
 
+    # get interactive inputs if input is not supplied at function
+    if not (tsp_file or solution_method):
+        tsp_file, solution_method = get_interactive_inputs()
+
     # setup the logger
     logging.basicConfig(level=logging_level, format='%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+    logger = logging.getLogger(__name__)
 
     # parse the .tsp file
     logger.info(f"Importing .tsp file '{os.path.basename(tsp_file)}'")
@@ -110,10 +112,11 @@ def solve_tsp(tsp_file, solution_method, runs, logging_level):
     mean_cost = 0  # the mean cost value of all runs
 
     # create the initial tsp instance
-    logger.debug("Creating TSP instance")
-    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4)
+    logger.info("Creating TSP instance")
+    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, logging_level=logging_level)
 
     # looping through each run
+    logger.info("Starting improve loop")
     for run in range(1, runs + 1):
 
         # shuffle the tour nodes
@@ -124,7 +127,6 @@ def solve_tsp(tsp_file, solution_method, runs, logging_level):
         tsp.tour.set_cost(tsp.cost_matrix)
 
         # execute the improvement method and timeit
-        logger.debug("Starting improve method")
         start_time = time.time()
         tsp.methods[solution_method]()
         end_time = time.time()

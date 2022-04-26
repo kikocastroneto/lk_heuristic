@@ -2,11 +2,8 @@ import math
 import logging
 import random
 from itertools import permutations
-from models.edge import Edge
-from models.tour import Tour
-
-# create the logger for the module
-logger = logging.getLogger(__name__)
+from lk_heuristic.models.edge import Edge
+from lk_heuristic.models.tour import Tour
 
 
 class Tsp:
@@ -18,7 +15,7 @@ class Tsp:
     # this is required when computing the gain in "simmetric" tours, to avoid incorrect calculations when using just "> 0"
     gain_precision = 0.01
 
-    def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4):
+    def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, logging_level=logging.INFO):
         """
         The TSP input is a list of nodes which will be used as input to build a tour and a cost function to build the cost matrix.
 
@@ -34,7 +31,13 @@ class Tsp:
         :type reduction_level: int
         :param reduction_cycle: the number of optimization cycles when reducted edges will start being considered
         :type reduction_cycle: int
+        :param logging_level: the level for logging messages
+        :type logging_level: int
         """
+
+        # setup the logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging_level)
 
         # initialize nodes
         self.nodes = nodes
@@ -666,7 +669,7 @@ class Tsp:
         improved = True
 
         # log the starting tour cost
-        logger.debug(f"Starting tour cost: {self.tour.cost:.3f}")
+        self.logger.debug(f"Starting tour cost: {self.tour.cost:.3f}")
 
         # loop until no improvement is found at TSP tour
         # this is the step 5 in LK Paper
@@ -681,7 +684,7 @@ class Tsp:
             unfeasible_swaps = len([swap for swap in self.tour.swap_stack if swap[-1] != "swap_feasible"])
 
             # log the current tour cost
-            logger.debug(f"Current tour '{tour_count}' cost: {self.tour.cost:.3f} / gain: {self.best_close_gain:.3f} / swaps: {total_swaps} / feasible swaps: {feasible_swaps} / unfeasible swaps: {unfeasible_swaps}")
+            self.logger.debug(f"Current tour '{tour_count}' cost: {self.tour.cost:.3f} / gain: {self.best_close_gain:.3f} / swaps: {total_swaps} / feasible swaps: {feasible_swaps} / unfeasible swaps: {unfeasible_swaps}")
 
             # update tour count
             tour_count += 1
@@ -706,7 +709,7 @@ class Tsp:
             if (self.double_bridge_gain > 0):
 
                 # log the current tour cost
-                logger.info(
+                self.logger.info(
                     f"Double bridge move found: cost: {self.tour.cost:.3f} / gain: {self.double_bridge_gain:.3f}")
 
                 # reset the double brige gain
@@ -789,10 +792,10 @@ class Tsp:
                     delta_gain = abs(delta_tour_cost - curr_gain)
 
                     if (delta_gain > self.gain_precision):
-                        logger.debug("delta gain error")
+                        self.logger.debug("delta gain error")
 
                     if (old_tour_cost < self.tour.cost):
-                        logger.debug("cost error")
+                        self.logger.debug("cost error")
 
                     # return true value meaning an improvement was found
                     return True
@@ -920,7 +923,7 @@ class Tsp:
         improved = True
 
         # log the starting tour cost
-        logger.debug(f"Starting tour cost: {self.tour.cost:.3f}")
+        self.logger.debug(f"Starting tour cost: {self.tour.cost:.3f}")
 
         # loop until no improvement is found at TSP tour
         while improved:
@@ -929,7 +932,7 @@ class Tsp:
             improved = self.lk2_main()
 
             # log the current tour cost
-            logger.debug(f"Current tour '{tour_count}' cost: {self.tour.cost:.3f}")
+            self.logger.debug(f"Current tour '{tour_count}' cost: {self.tour.cost:.3f}")
 
             # update tour count
             tour_count += 1
@@ -980,12 +983,12 @@ class Tsp:
                     min_tour = perm
 
                     # log the current  tour cost
-                    logger.info(f"Current tour '{tour_count}'cost: {self.tour.cost:.3f}")
+                    self.logger.info(f"Current tour '{tour_count}'cost: {self.tour.cost:.3f}")
 
                 # update and log count
                 tour_count += 1
                 if tour_count % 1000 == 0:
-                    logger.info(f"Current tour '{tour_count}' cost: {min_cost:.3f}")
+                    self.logger.info(f"Current tour '{tour_count}' cost: {min_cost:.3f}")
 
         # loop through each node of the best tour
         for i in range(-1, len(min_tour) - 1):

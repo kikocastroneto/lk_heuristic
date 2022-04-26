@@ -1,5 +1,5 @@
 from random import shuffle
-from models.edge import Edge
+from lk_heuristic.models.edge import Edge
 
 
 class Tour:
