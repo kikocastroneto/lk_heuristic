@@ -131,7 +131,7 @@ Example of the plot result using a280.tsp instance
 
 ## Packages and Versions
 
-- OS: Windows 10
+- OS: Windows 10 / Linux (tested on WSL2)
 - Python: 3.7.0 64bit
 - Additional Packages: plotly==5.5.0 
 
