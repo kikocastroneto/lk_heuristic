@@ -76,7 +76,7 @@ def get_interactive_inputs():
     return (tsp_file, solution_method)
 
 
-def solve(tsp_file=None, solution_method=None, runs=1, logging_level=logging.DEBUG):
+def solve(tsp_file=None, solution_method=None, runs=1, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, file_name=None, logging_level=logging.DEBUG):
     """
     Solve a specific tsp problem a certain amount of times using the tsp_file input and the desired solution method. If this functions is called with no supplied inputs, the interactive inputs will be collected through the terminal. The best solution is parsed to .tsp file and exported to solution folder. 
 
@@ -86,6 +86,14 @@ def solve(tsp_file=None, solution_method=None, runs=1, logging_level=logging.DEB
     :type solution_method: function
     :param runs: the number of improve runs to be performed
     :type runs: int
+    :param backtracking: the number of closest neighbors on each search level
+    :type backtracking: tuple
+    :param reduction_level: the search level where reduction starts being applied
+    :type reduction_level: int
+    :param reduction_cycle: the search cycle where reduction starts being applied
+    :type reduction_cycle: int
+    :param file_name: the name of the tsp file to be written
+    :type file_name: str
     :param logging_level: the verbosity level for more or less details during execution
     :type logging_level: int
     """
@@ -113,7 +121,7 @@ def solve(tsp_file=None, solution_method=None, runs=1, logging_level=logging.DEB
 
     # create the initial tsp instance
     logger.info("Creating TSP instance")
-    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, logging_level=logging_level)
+    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, backtracking=backtracking, reduction_level=reduction_level, reduction_cycle=reduction_cycle, logging_level=logging_level)
 
     # looping through each run
     logger.info("Starting improve loop")
@@ -146,6 +154,10 @@ def solve(tsp_file=None, solution_method=None, runs=1, logging_level=logging.DEB
     tsp_full_name = os.path.basename(tsp_file)
     tsp_name, tsp_ext = os.path.splitext(tsp_full_name)
     export_file = os.path.join(solutions_dir, f"{tsp_name}_{best_cost:.3f}.tsp")
+
+    # if a file name is supplied, the export file is overwritten
+    if file_name:
+        export_file = os.path.join(solutions_dir, f"{file_name}.tsp")
 
     # execute the export
     logger.info(f"Exporting '{os.path.basename(export_file)}' file to solutions folder")
