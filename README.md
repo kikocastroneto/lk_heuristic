@@ -59,7 +59,7 @@ In silent mode all args are passed to the solve function so that no interaction 
 
 ```
 from lk_heuristic.utils.solver_funcs import solve
-solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, logging_level=20)
+solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, file_name="C:/temp/test_solution.tsp", logging_level=20)
 ```
 
 ### Example of an interactive run 
@@ -102,7 +102,7 @@ folder
 
 ```
 from lk_heuristic.utils.solver_funcs import solve
-solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, logging_level=20)
+solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, file_name="C:/temp/test_solution.tsp", logging_level=20)
 2022-04-26 19:35:41,423 [INFO] lk_heuristic.utils.solver_funcs: Importing .tsp file 'test.tsp'
 2022-04-26 19:35:41,424 [INFO] lk_heuristic.utils.solver_funcs: Using 'euc_2d' for edge type 'EUC_2D'
 2022-04-26 19:35:41,425 [INFO] lk_heuristic.utils.solver_funcs: Creating TSP instance
