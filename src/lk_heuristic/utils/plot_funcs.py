@@ -29,7 +29,7 @@ def plot_tsp_2d(tsp_file):
     # fig template scheme
     fig.update_layout(title={
         'text': tsp_header["NAME"],
-        'y': 1.0,
+        'y': 0.95,
         'x': 0.5},
         template="plotly_white")
 
@@ -56,8 +56,8 @@ def plot_tsp_2d(tsp_file):
         x=x_coords,
         y=y_coords,
         mode='lines',
-        line=dict(color="rgb(192,192,192,0.2)",
-                  width=1),
+        line=dict(color="rgb(192,192,192)",
+                  width=2),
         showlegend=False))
 
     # plot the scatter of current node
@@ -65,8 +65,9 @@ def plot_tsp_2d(tsp_file):
         x=x_coords,
         y=y_coords,
         mode='markers',
-        line=dict(color="rgb(0,114,228,0.5)",
-                  width=10),
+        marker=dict(size=5, color="rgb(255,255,255)",
+                    line=dict(color="rgb(11,11,64)",
+                              width=1),),
         showlegend=False))
 
     # export the plot into a html file
@@ -95,7 +96,7 @@ def plot_tsp_3d(tsp_file):
     # fig template scheme
     fig.update_layout(title={
         'text': tsp_header["NAME"],
-        'y': 1.0,
+        'y': 0.95,
         'x': 0.5},
         template="plotly_white")
 
@@ -132,7 +133,7 @@ def plot_tsp_3d(tsp_file):
         y=y_coords,
         z=z_coords,
         mode='lines',
-        line=dict(color="rgb(192,192,192,0.2)",
+        line=dict(color="rgb(192,192,192)",
                   width=2),
         showlegend=False))
 
@@ -142,8 +143,9 @@ def plot_tsp_3d(tsp_file):
         y=y_coords,
         z=z_coords,
         mode='markers',
-        line=dict(color="rgb(0,114,228,0.5)",
-                  width=4),
+        marker=dict(size=5, color="rgb(255,255,255)",
+                    line=dict(color="rgb(11,11,64)",
+                              width=1),),
         showlegend=False))
 
     # export the plot into a html file
