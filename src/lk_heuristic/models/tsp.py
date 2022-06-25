@@ -632,10 +632,6 @@ class Tsp:
                                 # compute the new cost for the new tour
                                 self.tour.set_cost(self.cost_matrix)
 
-                                # add the solution string to the set (direct and reversed order)
-                                self.solutions.add(hash(tuple([node.succ.id for node in self.tour.nodes])))
-                                self.solutions.add(hash(tuple([node.pred.id for node in self.tour.nodes])))
-
                                 # reset close gains
                                 self.close_gains.clear()
 
@@ -695,6 +691,10 @@ class Tsp:
 
         # update improvement cycle count
         self.cycles += 1
+
+        # add the current solution string to the set (direct and reversed order)
+        self.solutions.add(hash(tuple([node.succ.id for node in self.tour.nodes])))
+        self.solutions.add(hash(tuple([node.pred.id for node in self.tour.nodes])))
 
         # initialize or update the reduction edges by intersecting reduction edges with new tour edges
         self.reduction_edges = set(self.tour.edges) if self.cycles == 1 else self.reduction_edges.intersection(self.tour.edges)
@@ -773,10 +773,6 @@ class Tsp:
 
                 # compute the current gain value
                 curr_gain = gain + (broken_cost - joined_cost)
-
-                # check for repeated tours (one of LK refinements is to remove repeated tours that already were tested and checked that can't be improved). O(n) complexity like the one done below could be improved with hashingtables, as done by Helsgaum.
-                if (hash(tuple([node.succ.id for node in self.tour.nodes])) in self.solutions):
-                    return False
 
                 # if gain is positive, restart the search with new tour
                 # this is a simplification of LK from Helsgaun paper. LK suggest to continue the search, while Helsgaun suggest to simplify the algorithm
@@ -898,9 +894,6 @@ class Tsp:
 
                             # reset the swap stack
                             self.tour.swap_stack.clear()
-
-                            # add the solution string to the set
-                            self.solutions.add(hash(tuple([node.succ.id for node in self.tour.nodes])))
 
                             # return true value
                             return True
