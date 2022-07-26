@@ -22,7 +22,7 @@ Nodes are implemented as Doubly-Linked Lists, one of the structures mentioned by
 
 There are 4 refinements proposed in the 1973 article aiming to improve the algorithm performance, which were implemented in this packages:
 
- 1. Avoid checkout time (by skipping repeated 'bad' tours).
+ 1. Avoid checkout time (by skipping repeated 'bad' tours)
  2. Lookahead (by selecting 'good' edges for swaps)
  3. Reduction (by keeping 'good' edges from being broken)
  4. Non-Sequential exchanges (by executing the double-bridge 4-Opt move)
@@ -134,6 +134,17 @@ Example of the plot result using a280.tsp instance
 - OS: Windows 10 / Linux (tested on WSL2)
 - Python: 3.7.0 64bit
 - Additional Packages: plotly==5.5.0 
+
+## Future Work
+
+For those who are interested in LK heuristic and want to help implementing and improving this library, here are some ideas of future work:
+
+- Implement the checkout refinement as done in LKH (using a hashtable)
+- Implement a better node structure than Doubly Linked Lists
+- Implement a better cost matrix data structure
+- Implement all default cost functions and patterns from TSPLIB
+- Implement CLK (Chained Lin Kernighan) algorithm
+- Rework unit tests with shorter tests and use more edge cases
 
 [lk_article]: https://doi.org/10.1287%2Fopre.21.2.498
 [lkh_article]: https://doi.org/10.1016%2FS0377-2217%2899%2900284-2
