@@ -4,6 +4,7 @@ import random
 from itertools import permutations
 from lk_heuristic.models.edge import Edge
 from lk_heuristic.models.tour import Tour
+from lk_heuristic.models.node import NodePivot
 
 
 class Tsp:
@@ -15,7 +16,7 @@ class Tsp:
     # this is required when computing the gain in "simmetric" tours, to avoid incorrect calculations when using just "> 0"
     gain_precision = 0.01
 
-    def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, logging_level=logging.INFO):
+    def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, tour_type="cycle", logging_level=logging.INFO):
         """
         The TSP input is a list of nodes which will be used as input to build a tour and a cost function to build the cost matrix.
 
@@ -31,6 +32,8 @@ class Tsp:
         :type reduction_level: int
         :param reduction_cycle: the number of optimization cycles when reducted edges will start being considered
         :type reduction_cycle: int
+        :param tour_type: the type of the tour (either 'path' or 'cycle')
+        :type tour_type: str
         :param logging_level: the level for logging messages
         :type logging_level: int
         """
@@ -42,8 +45,11 @@ class Tsp:
         # initialize nodes
         self.nodes = nodes
 
-        # initialize the tour using the nodes
-        self.tour = Tour(self.nodes)
+        # initialize the tour type
+        self.tour_type = tour_type
+
+        # initialize the tour using the nodes and the tour type
+        self.tour = Tour(self.nodes, t=tour_type)
 
         # shuffle the tour nodes
         if shuffle:
@@ -115,7 +121,10 @@ class Tsp:
                 n2 = self.nodes[j]
 
                 # compute the cost between nodes
-                cost = cost_func(n1, n2)
+                # for hamiltonian path, pivot nodes are used and edges containing those nodes will have zero cost
+                cost = 0
+                if not (type(n1) == NodePivot or type(n2) == NodePivot):
+                    cost = cost_func(n1, n2)
 
                 # update cost matrix
                 self.cost_matrix[(n1.id, n2.id)] = cost

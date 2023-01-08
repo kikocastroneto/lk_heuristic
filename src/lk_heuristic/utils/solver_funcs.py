@@ -76,7 +76,7 @@ def get_interactive_inputs():
     return (tsp_file, solution_method)
 
 
-def solve(tsp_file=None, solution_method=None, runs=1, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, file_name=None, logging_level=logging.DEBUG):
+def solve(tsp_file=None, solution_method=None, runs=1, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, tour_type="cycle", file_name=None, logging_level=logging.DEBUG):
     """
     Solve a specific tsp problem a certain amount of times using the tsp_file input and the desired solution method. If this functions is called with no supplied inputs, the interactive inputs will be collected through the terminal. The best solution is parsed to .tsp file and exported to solution folder. 
 
@@ -92,6 +92,8 @@ def solve(tsp_file=None, solution_method=None, runs=1, backtracking=(5, 5), redu
     :type reduction_level: int
     :param reduction_cycle: the search cycle where reduction starts being applied
     :type reduction_cycle: int
+    :param tour_type: the type of the tour (either 'path' or 'cycle')
+    :type tour_type: str
     :param file_name: the name of the tsp file to be written
     :type file_name: str
     :param logging_level: the verbosity level for more or less details during execution
@@ -121,7 +123,7 @@ def solve(tsp_file=None, solution_method=None, runs=1, backtracking=(5, 5), redu
 
     # create the initial tsp instance
     logger.info("Creating TSP instance")
-    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, backtracking=backtracking, reduction_level=reduction_level, reduction_cycle=reduction_cycle, logging_level=logging_level)
+    tsp = Tsp(tsp_nodes, cost_function, shuffle=False, backtracking=backtracking, reduction_level=reduction_level, reduction_cycle=reduction_cycle, tour_type=tour_type, logging_level=logging_level)
 
     # looping through each run
     logger.info("Starting improve loop")
@@ -161,4 +163,4 @@ def solve(tsp_file=None, solution_method=None, runs=1, backtracking=(5, 5), redu
 
     # execute the export
     logger.info(f"Exporting '{os.path.basename(export_file)}' file to solutions folder")
-    export_tsp_file(export_file, tsp_header, best_tour)
+    export_tsp_file(export_file, tsp_header, best_tour, tour_type)

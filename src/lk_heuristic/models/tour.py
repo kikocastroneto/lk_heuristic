@@ -1,19 +1,25 @@
 from random import shuffle
+from lk_heuristic.models.node import NodePivot
 from lk_heuristic.models.edge import Edge
 
 
 class Tour:
     """
-    The tour class represents a sequence of edges that starts at one node, visits all tour nodes and ends at same starting node. The nodes will be a list of nodes in the ordering of visit, while edges is a set of edges (so ordering is not considered).
+    The tour class represents a sequence of edges that starts at one node, visits all tour nodes and ends at same starting node (for 'cycle' tours) or not (for 'path' tours). The nodes will be a list of nodes in the ordering of visit, while edges is a set of edges (so ordering is not considered).
     """
 
-    def __init__(self, nodes):
+    def __init__(self, nodes, t="cycle"):
         """
-        A tour is made by a sequence of edges. Since edges are defined by sequence of nodes, the node sequence is used as input.
+        A tour is made by a sequence of edges. Since edges are defined by sequence of nodes, the node sequence is used as input. The tour type ('t') can be either "cycle" (for the classic hamiltonian cycle tsp) or "path" (for the hamiltonian path tsp).
 
-        :param nodes: the list of Nodes2D/Nodes3D that makes the tour
+        :param nodes: the list of Nodes that makes the tour
         :type nodes: list
+        :param t: the type of the tour
+        :type t: str
         """
+
+        # initialize the tour type
+        self.t = t
 
         # set the tour nodes and initialize tour node parameters
         self.nodes = nodes
@@ -37,6 +43,10 @@ class Tour:
         """
         Update tour nodes with specific related tour properties
         """
+
+        # for hamiltonian path tsp, create the pivot node and append it to nodes list
+        if self.t == "path":
+            self.nodes.append(NodePivot())
 
         # loop through each node and set the tour properties
         for i in range(len(self.nodes)):
@@ -133,8 +143,17 @@ class Tour:
         # start a list of sorted nodes
         tour_nodes = []
 
-        # initialization with first
-        curr_node = self.nodes[0]
+        # get the start index for first node
+        # when tour is hamiltonian path, the first node will be the pivot node (so when exporting the tsp file, this node is removed)
+        start_idx = 0
+        if self.t == "path":
+            for i, node in enumerate(self.nodes):
+                if type(node) == NodePivot:
+                    start_idx = i
+                    break
+
+        # initialization with first node
+        curr_node = self.nodes[start_idx]
         visited_nodes.remove(curr_node)
 
         # loop until all nodes have been seen (this is necessary for unfeasible tours, like two separated subtours)

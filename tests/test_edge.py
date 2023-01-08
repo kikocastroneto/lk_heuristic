@@ -15,9 +15,11 @@ class TestEdge(unittest.TestCase):
 
         # initialize 2D test nodes
         node_2d_1 = Node2D(0, 1)
+        node_2d_1.id = 0
         node_2d_2 = Node2D(1, 0)
+        node_2d_2.id = 1
         node_2d_3 = Node2D(0, 1)
-        node_2d_3.id = node_2d_1.id + 1
+        node_2d_3.id = 2
 
         #  a test edge
         self.edge_2d_1 = Edge(node_2d_1, node_2d_2)
@@ -33,9 +35,11 @@ class TestEdge(unittest.TestCase):
 
         # initialize 3D test nodes
         node_3d_1 = Node3D(0, 1, 0)
+        node_3d_1.id = 0
         node_3d_2 = Node3D(1, 0, 0)
+        node_3d_2.id = 1
         node_3d_3 = Node3D(0, 1, 0)
-        node_3d_3.id = node_3d_1.id + 1
+        node_3d_3.id = 2
 
         #  a test edge
         self.edge_3d_1 = Edge(node_3d_1, node_3d_2)

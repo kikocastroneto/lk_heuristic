@@ -33,6 +33,23 @@ class Node:
         else:
             return False
 
+    def __gt__(self, other):
+        """
+        Greater than comparison method between two nodes. This is relevant when building edges, to always keep same node ordering (for simmetric TSP).
+
+        :param other: other node of comparison
+        :type other: Node
+        :return: a boolean indicating if node is greater than other node
+        :rtype: boolean
+        """
+        return (self.id > other.id)
+
+    def __hash__(self):
+        """
+        Hashing Node object is required to allow comparison of Edge, which are elements made of Nodes. The hash is performed in the id value.
+        """
+        return hash(self.id)
+
     def __str__(self):
         """
         The display string when printing the object
@@ -74,38 +91,6 @@ class Node2D(Node):
         self.x = x
         self.y = y
 
-    def __eq__(self, other):
-        """
-        Equal comparison method between two 2D nodes, which will be true when both node coordinates are equal and node id is equal (id comparison is done so that nodes with repeated coordinates are considered different. This may happen is some tsp instances)
-
-        :param other: other node of comparison
-        :type other: Node2D
-        :return: a boolean indicating if both nodes are equal
-        :rtype: boolean
-        """
-        # check if other node is not None
-        if (other):
-            return (self.x == other.x and self.y == other.y and self.id == other.id)
-        else:
-            return False
-
-    def __gt__(self, other):
-        """
-        Greater than comparison method between two 2D nodes, which will be true when the tuple made of nodes are greater than the other tuple of nodes. This is relevant when building edges, to always keep same node ordering (for simmetric TSP).
-
-        :param other: other node of comparison
-        :type other: Node2D
-        :return: a boolean indicating if node is greater than other node
-        :rtype: boolean
-        """
-        return ((self.x, self.y) > (other.x, other.y))
-
-    def __hash__(self):
-        """
-        Hashing Node2D object is required to allow comparison of Edge, which are elements made of Node2D. The hash is performed in the tuple of node x and y values
-        """
-        return hash((self.x, self.y))
-
     def __str__(self):
         """
         The display string when printing the object
@@ -113,7 +98,7 @@ class Node2D(Node):
         :return: the display string
         :rtype: str
         """
-        return f"({self.x},{self.y})"
+        return f"{self.id}:({self.x},{self.y})"
 
     def __repr__(self):
         """
@@ -122,7 +107,7 @@ class Node2D(Node):
         :return: the display string
         :rtype: str
         """
-        return f"({self.x},{self.y})"
+        return f"{self.id}:({self.x},{self.y})"
 
 
 class Node3D(Node):
@@ -150,38 +135,6 @@ class Node3D(Node):
         self.y = y
         self.z = z
 
-    def __eq__(self, other):
-        """
-        Equal comparison method between two 3D nodes, which will be true when both node coordinates are equal and node id is equal (id comparison is done so that nodes with repeated coordinates are considered different. This may happen is some tsp instances)
-
-        :param other: other node of comparison
-        :type other: Node3D
-        :return: a boolean indicating if both nodes are equal
-        :rtype: boolean
-        """
-        # check if other node is not None
-        if (other):
-            return (self.x == other.x and self.y == other.y and self.z == other.z and self.id == other.id)
-        else:
-            return False
-
-    def __gt__(self, other):
-        """
-        Greater than comparison method between two 3D nodes, which will be true when the tuple made of nodes are greater than the other tuple of nodes. This is relevant when building edges, to always keep same node ordering (for simmetric TSP).
-
-        :param other: other node of comparison
-        :type other: Node3D
-        :return: a boolean indicating if node is greater than other node
-        :rtype: boolean
-        """
-        return ((self.x, self.y, self.z) > (other.x, other.y, other.z))
-
-    def __hash__(self):
-        """
-        Hashing Node3D object is required to allow comparison of Edge, which are elements made of Node3D. The hash is performed in the tuple of node x, y and z values
-        """
-        return hash((self.x, self.y, self.z))
-
     def __str__(self):
         """
         The display string when printing the object
@@ -189,7 +142,7 @@ class Node3D(Node):
         :return: the display string
         :rtype: str
         """
-        return f"({self.x},{self.y},{self.z})"
+        return f"{self.id}:({self.x},{self.y},{self.z})"
 
     def __repr__(self):
         """
@@ -198,4 +151,11 @@ class Node3D(Node):
         :return: the display string
         :rtype: str
         """
-        return f"({self.x},{self.y},{self.z})"
+        return f"{self.id}:({self.x},{self.y},{self.z})"
+
+
+class NodePivot(Node):
+    """
+    The pivot node is a dummy node used at hamiltonian path tours, where edges containing these nodes will have zero cost
+    """
+    pass

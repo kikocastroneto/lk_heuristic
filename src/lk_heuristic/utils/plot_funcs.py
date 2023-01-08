@@ -7,12 +7,14 @@ file_dir = os.path.dirname(os.path.realpath(__file__))
 plots_dir = os.path.abspath(os.path.join(file_dir, "../", "plots"))
 
 
-def plot_tsp_2d(tsp_file):
+def plot_tsp_2d(tsp_file, tour_type="cycle"):
     """
-    Plot a tsp tour in a 2D graph using plotly library and save the plot at "plots" folder
+    Plot a tsp tour in a 2D graph using plotly library and save the plot at "plots" folder. 
 
     :param tsp_file: the tsp file to be plot
     :type tour: str
+    :param tour_type: the type of the tour (either 'path' or 'cycle')
+    :type tour_type: str
     """
 
     # get the file name and extension
@@ -47,9 +49,10 @@ def plot_tsp_2d(tsp_file):
         x_coords.append(node.x)
         y_coords.append(node.y)
 
-    # append last edge to close the tour
-    x_coords.append(x_coords[0])
-    y_coords.append(y_coords[0])
+    # append last edge to close the tour, if 'cycle' tour type
+    if tour_type == "cycle":
+        x_coords.append(x_coords[0])
+        y_coords.append(y_coords[0])
 
     # plot the line between two nodes
     fig.add_trace(go.Scatter(
@@ -74,12 +77,14 @@ def plot_tsp_2d(tsp_file):
     fig.write_html(os.path.join(plots_dir, f"{file_name}.html"))
 
 
-def plot_tsp_3d(tsp_file):
+def plot_tsp_3d(tsp_file, tour_type="cycle"):
     """
     Plot a tsp tour in a 3D graph using plotly library and save the plot at "plots" folder
 
     :param tsp_file: the tsp file to be plot
     :type tour: str
+    :param tour_type: the type of the tour (either 'path' or 'cycle')
+    :type tour_type: str
     """
 
     # get the file name and extension
@@ -122,10 +127,11 @@ def plot_tsp_3d(tsp_file):
         y_coords.append(node.y)
         z_coords.append(node.z)
 
-    # append last edge to close the tour
-    x_coords.append(x_coords[0])
-    y_coords.append(y_coords[0])
-    z_coords.append(z_coords[0])
+    # append last edge to close the tour, if 'cycle' tour type
+    if tour_type == "cycle":
+        x_coords.append(x_coords[0])
+        y_coords.append(y_coords[0])
+        z_coords.append(z_coords[0])
 
     # plot the line between two nodes
     fig.add_trace(go.Scatter3d(

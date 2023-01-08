@@ -8,15 +8,15 @@ class Edge:
         Initialize an edge with its nodes. The node order (n1/n2) is switched based on node values to guarantee the simmetric property of TSP edges, i.e, {n1,n2} == {n2,n1}. By comparing the nodes, the order will always be the same, so is not necessary to check node ordering later.
 
         :param n1: the first node
-        :type n1: Node2D/Node3D
+        :type n1: Node
         :param n2: the second node
-        :type n2: Node2D/Node3D
+        :type n2: Node
         """
 
         # asserting that a valid edge can't connect to same node
         assert(n1 != n2)
 
-        if n1 > n2:
+        if n1 < n2:
             self.n1 = n1
             self.n2 = n2
         # switch the ordering
@@ -37,9 +37,9 @@ class Edge:
 
     def __hash__(self):
         """
-        Hashing Edge object is required to allow building sets of edges, which are "fast" objects used in LK joined and broken edges sets. The hash is performed in the tuple of node 1 and node 2 objects.
+        Hashing Edge object is required to allow building sets of edges, which are "fast" objects used in LK joined and broken edges sets. The hash is performed in the tuple of node 1 and node 2 id values.
         """
-        return hash((self.n1, self.n2))
+        return hash((self.n1.id, self.n2.id))
 
     def __str__(self):
         """

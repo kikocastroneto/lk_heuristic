@@ -82,7 +82,7 @@ def import_tsp_file(tsp_file):
     return tsp_header, nodes
 
 
-def export_tsp_file(tsp_file_path, tsp_header, nodes):
+def export_tsp_file(tsp_file_path, tsp_header, nodes, tour_type="cycle"):
     """
     Export a .tsp file using tsp_header header elements and list of nodes. Nodes are parsed into "NODES_COORD_SECTION" format.
 
@@ -92,6 +92,8 @@ def export_tsp_file(tsp_file_path, tsp_header, nodes):
     :type tsp_header: dict
     :param nodes: a list containing nodes to be parsed into tsp file
     :type nodes: list
+    :param tour_type: the type of the tour (either 'path' or 'cycle')
+    :type tour_type: str
     """
 
     # try to execute the export
@@ -106,6 +108,11 @@ def export_tsp_file(tsp_file_path, tsp_header, nodes):
 
             # write the node section
             f.write("NODE_COORD_SECTION\n")
+
+            # removes pivot node when using hamiltonian path tour type
+            # pivot node shall be the first node (from Tour get_nodes function)
+            if tour_type == "path":
+                nodes.pop(0)
 
             # loop through each node and write its values to file
             for i, node in enumerate(nodes):

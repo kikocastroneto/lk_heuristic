@@ -26,7 +26,11 @@ There are 4 refinements proposed in the 1973 article aiming to improve the algor
  2. Lookahead (by selecting 'good' edges for swaps)
  3. Reduction (by keeping 'good' edges from being broken)
  4. Non-Sequential exchanges (by executing the double-bridge 4-Opt move)
- 
+
+### Tour Types
+
+Classical TSP instances are closed loops, also called Hamiltonian cycles, where last and first nodes are connected together. Another type of tours, called Hamiltonian paths, have no connection between starting and ending nodes, but requires a specific solving strategy. This package can solve both problems by setting the 'tour_type' parameter at main solve() function. The same parameter is used to export the solution file and can be used to plot instances based on their tour types. 
+
 ## How-to-use
 
 ### TSPLIB
@@ -59,7 +63,7 @@ In silent mode all args are passed to the solve function so that no interaction 
 
 ```
 from lk_heuristic.utils.solver_funcs import solve
-solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, file_name="C:/temp/test_solution.tsp", logging_level=20)
+solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, tour_type="cycle", file_name="C:/temp/test_solution.tsp", logging_level=20)
 ```
 
 ### Example of an interactive run 
@@ -102,7 +106,7 @@ folder
 
 ```
 from lk_heuristic.utils.solver_funcs import solve
-solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, file_name="C:/temp/test_solution.tsp", logging_level=20)
+solve(tsp_file="C:/temp/test.tsp", solution_method="lk1_improve", runs=50, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, tour_type="cycle", file_name="C:/temp/test_solution.tsp", logging_level=20)
 2022-04-26 19:35:41,423 [INFO] lk_heuristic.utils.solver_funcs: Importing .tsp file 'test.tsp'
 2022-04-26 19:35:41,424 [INFO] lk_heuristic.utils.solver_funcs: Using 'euc_2d' for edge type 'EUC_2D'
 2022-04-26 19:35:41,425 [INFO] lk_heuristic.utils.solver_funcs: Creating TSP instance
@@ -121,9 +125,11 @@ The main output from the improvement process is the .tsp file with nodes sorted 
 
 In plot_funcs.py, there are two functions to plot either 2D or 3D graphs using as input the .tsp file. After running those functions, a html file is exported at 'plots' folder, which can be viewed using the browser.
 
+The 'tour_type' parameter is used to plot either Hamiltonian 'cycle' or 'path'. The 'path' type will not connect first and last tsp file nodes, which are correctly sorted when solving tsp instances with the 'tour_type' == 'path'
+
 ```
 from lk_heuristic.utils.plot_funcs import plot_tsp_2d
-plot_tsp_2d("src/lk_heuristic/solutions/a280_2593.558.tsp")
+plot_tsp_2d("src/lk_heuristic/solutions/a280_2593.558.tsp", tour_type="cycle")
 ```
 
 Example of the plot result using a280.tsp instance
