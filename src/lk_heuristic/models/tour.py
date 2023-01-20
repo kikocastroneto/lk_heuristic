@@ -33,7 +33,7 @@ class Tour:
         self.cost = 0
 
         # set the size of the tour
-        self.size = len(nodes)
+        self.size = len(self.nodes)
 
         # init the swap stack
         # the swap stack is the "memory" of swap functions executed in a specific tour (relevant when required to undo the swaps). it is a tuple on the form (n1, n2, n3, n4, swap_operation)
@@ -189,15 +189,12 @@ class Tour:
         Shuffle the tour nodes creating a random tour and re-initializing the tour edges 
         """
 
-        # create random indexes between 1 and size-1
-        indexes = [i for i in range(1, self.size)]
+        # create indexes and shuffle them
+        indexes = [i for i in range(self.size)]
         shuffle(indexes)
 
-        # add the 0 (first node) at the end of the indexes list
-        indexes.append(0)
-
-        # initilize the current node
-        curr_node = self.nodes[0]
+        # initialize the current node
+        curr_node = self.nodes[indexes[-1]]
 
         # loop to change the predecessor, successor and position of each node
         for i in range(-1, self.size - 1):
