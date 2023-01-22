@@ -1015,7 +1015,8 @@ class Tsp:
         nodes = set(self.nodes)
 
         # get the starting node
-        curr_node = self.nodes[0]
+        start_node = random.choice(self.nodes)
+        curr_node = start_node
 
         # start the set of visited nodes
         visited_nodes = set()
@@ -1043,8 +1044,8 @@ class Tsp:
             curr_node = next_node
 
         # update the starting and ending nodes
-        self.nodes[0].pred = curr_node
-        curr_node.succ = self.nodes[0]
+        start_node.pred = curr_node
+        curr_node.succ = start_node
 
         # update the cost value
         self.tour.set_cost(self.cost_matrix)
