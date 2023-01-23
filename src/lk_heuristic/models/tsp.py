@@ -576,7 +576,7 @@ class Tsp:
         # loop through each node in the tour, to apply the optimization
         # LK Heuristic will loop over all tour nodes as initial nodes (first node is explored in total)
         # this is step 2 and 6(e) in LK Paper
-        for t1 in self.tour.get_nodes():
+        for t1 in self.tour.get_nodes(random_start=True):
 
             # loop through each neighboorhood node from initial node (second node is also explored as total, so at least 2-opt is always tested for all nodes)
             # this is step 2 and 6(d) in LK Paper
@@ -871,7 +871,7 @@ class Tsp:
 
         # loop through each node in the tour, to apply the optimization
         # LK Heuristic will loop over all tour nodes as initial nodes (first node is explored in total)
-        for t1 in self.tour.get_nodes():
+        for t1 in self.tour.get_nodes(random_start=True):
 
             # loop through each neighboorhood node from initial node (second node is also explored as total, so at least 2-opt is always tested for all nodes)
             for t2 in (t1.pred, t1.succ):

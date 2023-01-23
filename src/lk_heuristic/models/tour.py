@@ -1,4 +1,4 @@
-from random import shuffle
+from random import shuffle, choice
 from lk_heuristic.models.node import NodePivot
 from lk_heuristic.models.edge import Edge
 
@@ -129,11 +129,13 @@ class Tour:
             curr_node = curr_node.succ
             curr_node.pos = curr_node.pred.pos + 1
 
-    def get_nodes(self):
+    def get_nodes(self, random_start=False):
         """
         Get the nodes inside the tour sorted by their sequence and return the list of nodes
 
-        :return: the list of node indexes
+        :param random_start: boolean indicating if first tour node shall be a random node 
+        :type random_start: bool
+        :return: the list of tour nodes
         :rtype: list
         """
 
@@ -143,17 +145,22 @@ class Tour:
         # start a list of sorted nodes
         tour_nodes = []
 
-        # get the start index for first node
-        # when tour is hamiltonian path, the first node will be the pivot node (so when exporting the tsp file, this node is removed)
-        start_idx = 0
-        if self.t == "path":
-            for i, node in enumerate(self.nodes):
+        # get the starting node
+        # default to first node from node list
+        curr_node = self.nodes[0]
+
+        # if random_start is True, gets a random starting node
+        if random_start:
+            curr_node = choice(self.nodes)
+
+        # if no random_start at hamiltonian paths, gets the pivot node as starting node (so exported tsp has the first and last element as the open nodes)
+        elif self.t == "path":
+            for node in self.nodes:
                 if type(node) == NodePivot:
-                    start_idx = i
+                    curr_node = node
                     break
 
         # initialization with first node
-        curr_node = self.nodes[start_idx]
         visited_nodes.remove(curr_node)
 
         # loop until all nodes have been seen (this is necessary for unfeasible tours, like two separated subtours)
