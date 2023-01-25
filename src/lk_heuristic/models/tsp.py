@@ -45,6 +45,9 @@ class Tsp:
         # initialize nodes
         self.nodes = nodes
 
+        # the node from where the heuristic search procedure starts
+        self.start_node = random.choice(nodes)
+
         # initialize the tour type
         self.tour_type = tour_type
 
@@ -576,7 +579,7 @@ class Tsp:
         # loop through each node in the tour, to apply the optimization
         # LK Heuristic will loop over all tour nodes as initial nodes (first node is explored in total)
         # this is step 2 and 6(e) in LK Paper
-        for t1 in self.tour.get_nodes(random_start=True):
+        for t1 in self.tour.get_nodes(start_node=self.start_node):
 
             # loop through each neighboorhood node from initial node (second node is also explored as total, so at least 2-opt is always tested for all nodes)
             # this is step 2 and 6(d) in LK Paper
@@ -637,6 +640,10 @@ class Tsp:
 
                                 # undo executed swaps until best gain index
                                 self.tour.restore((len(self.close_gains) - 1) - best_index)
+
+                                # reset the starting node to t4, to continue from exploration from it
+                                # this increases performance when compared to random or fixed starting node methods
+                                self.start_node = self.tour.swap_stack[-1][3]
 
                                 # compute the new cost for the new tour
                                 self.tour.set_cost(self.cost_matrix)
@@ -790,17 +797,8 @@ class Tsp:
                     # add joined edge
                     joined_edges.add(joined_edge)
 
-                    # a sanity check here
-                    old_tour_cost = self.tour.cost
-                    self.tour.set_cost(self.cost_matrix)  # this shall not be erased in the future!
-                    delta_tour_cost = abs(old_tour_cost - self.tour.cost)
-                    delta_gain = abs(delta_tour_cost - curr_gain)
-
-                    if (delta_gain > self.gain_precision):
-                        self.logger.debug("delta gain error")
-
-                    if (old_tour_cost < self.tour.cost):
-                        self.logger.debug("cost error")
+                    # update tour cost
+                    self.tour.set_cost(self.cost_matrix)
 
                     # return true value meaning an improvement was found
                     return True
@@ -871,7 +869,7 @@ class Tsp:
 
         # loop through each node in the tour, to apply the optimization
         # LK Heuristic will loop over all tour nodes as initial nodes (first node is explored in total)
-        for t1 in self.tour.get_nodes(random_start=True):
+        for t1 in self.tour.get_nodes(start_node=self.start_node):
 
             # loop through each neighboorhood node from initial node (second node is also explored as total, so at least 2-opt is always tested for all nodes)
             for t2 in (t1.pred, t1.succ):
@@ -903,6 +901,9 @@ class Tsp:
 
                             # reset the swap stack
                             self.tour.swap_stack.clear()
+
+                            # update starting node
+                            self.start_node = t4
 
                             # return true value
                             return True

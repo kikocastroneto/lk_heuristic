@@ -129,12 +129,14 @@ class Tour:
             curr_node = curr_node.succ
             curr_node.pos = curr_node.pred.pos + 1
 
-    def get_nodes(self, random_start=False):
+    def get_nodes(self, random_start=False, start_node=None):
         """
         Get the nodes inside the tour sorted by their sequence and return the list of nodes
 
         :param random_start: boolean indicating if first tour node shall be a random node 
         :type random_start: bool
+        :param start_node: the starting node of the tour 
+        :type start_node: Node
         :return: the list of tour nodes
         :rtype: list
         """
@@ -149,8 +151,12 @@ class Tour:
         # default to first node from node list
         curr_node = self.nodes[0]
 
+        # if a starting node is defined, set as the current node
+        if start_node:
+            curr_node = start_node
+
         # if random_start is True, gets a random starting node
-        if random_start:
+        elif random_start:
             curr_node = choice(self.nodes)
 
         # if no random_start at hamiltonian paths, gets the pivot node as starting node (so exported tsp has the first and last element as the open nodes)
