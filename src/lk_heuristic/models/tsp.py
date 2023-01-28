@@ -550,7 +550,7 @@ class Tsp:
                     if (gain > self.gain_precision):
 
                         # execute double bridge swap
-                        self.tour.swap_double_bridge(t1, t2, t3, t4, t5, t6, t7, t8)
+                        self.tour.swap_double_bridge(t1, t2, t3, t4, t5, t6, t7, t8, False)
 
                         # update the double bridge gain
                         self.double_bridge_gain = gain
