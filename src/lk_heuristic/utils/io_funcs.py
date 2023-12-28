@@ -9,7 +9,7 @@ def import_tsp_file(tsp_file):
     """
     Import a .tsp file containing tsp definition and parse tsp header to a dictionary and tsp nodes to a list. Returns both objects in a tuple.
 
-    *This function only works for .tsp instances of "TYPE" = TSP (simmetric tsp) and for "EDGE_WEIGH_TYPE" = EUC_2D or EUC_3D, which are the tsp problems that solver can handle currently.
+    *This function only works for .tsp instances of "TYPE" = TSP (symmetric tsp) and for "EDGE_WEIGH_TYPE" = EUC_2D or EUC_3D, which are the tsp problems that solver can handle currently.
 
     :param tsp_file: the .tsp file path
     :type tsp_file: str
@@ -43,7 +43,7 @@ def import_tsp_file(tsp_file):
                 # checking if coord section was already reached
                 if is_node_section:
 
-                    # check if problem is tsp (simmetric tsp) and edge_weight is either euc_2d or euc_3d
+                    # check if problem is tsp (symmetric tsp) and edge_weight is either euc_2d or euc_3d
                     if tsp_header["TYPE"] in allowed_types and tsp_header["EDGE_WEIGHT_TYPE"] in allowed_edge_weights:
 
                         # check if line is not last end-of-file line

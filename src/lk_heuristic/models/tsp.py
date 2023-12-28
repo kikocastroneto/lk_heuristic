@@ -13,7 +13,7 @@ class Tsp:
     """
 
     # set the precision of the gain
-    # this is required when computing the gain in "simmetric" tours, to avoid incorrect calculations when using just "> 0"
+    # this is required when computing the gain in "symmetric" tours, to avoid incorrect calculations when using just "> 0"
     gain_precision = 0.01
 
     def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, tour_type="cycle", logging_level=logging.INFO):
@@ -131,7 +131,7 @@ class Tsp:
 
                 # update cost matrix
                 self.cost_matrix[(n1.id, n2.id)] = cost
-                self.cost_matrix[(n2.id, n1.id)] = cost  # simmetric value
+                self.cost_matrix[(n2.id, n1.id)] = cost  # symmetric value
 
             # update index for next iteration
             index += 1

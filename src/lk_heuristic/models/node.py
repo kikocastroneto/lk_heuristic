@@ -35,7 +35,7 @@ class Node:
 
     def __gt__(self, other):
         """
-        Greater than comparison method between two nodes. This is relevant when building edges, to always keep same node ordering (for simmetric TSP).
+        Greater than comparison method between two nodes. This is relevant when building edges, to always keep same node ordering (for symmetric TSP).
 
         :param other: other node of comparison
         :type other: Node
