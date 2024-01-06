@@ -13,7 +13,7 @@ class Tsp:
     """
 
     # set the precision of the gain
-    # this is required when computing the gain in "simmetric" tours, to avoid incorrect calculations when using just "> 0"
+    # this is required when computing the gain in "symmetric" tours, to avoid incorrect calculations when using just "> 0"
     gain_precision = 0.01
 
     def __init__(self, nodes, cost_function, shuffle=False, backtracking=(5, 5), reduction_level=4, reduction_cycle=4, tour_type="cycle", logging_level=logging.INFO):
@@ -115,26 +115,22 @@ class Tsp:
         :type cost_func: function
         """
 
-        # index is used to avoid repeated computation
-        index = 0
         for i in range(len(self.nodes)):
-            for j in range(index, len(self.nodes)):
+            for j in range(i, len(self.nodes)):
                 # get node 1 and node2
                 n1 = self.nodes[i]
                 n2 = self.nodes[j]
 
                 # compute the cost between nodes
                 # for hamiltonian path, pivot nodes are used and edges containing those nodes will have zero cost
-                cost = 0
-                if not (type(n1) == NodePivot or type(n2) == NodePivot):
+                if type(n1) == NodePivot or type(n2) == NodePivot:
+                    cost = 0
+                else:
                     cost = cost_func(n1, n2)
 
                 # update cost matrix
                 self.cost_matrix[(n1.id, n2.id)] = cost
-                self.cost_matrix[(n2.id, n1.id)] = cost  # simmetric value
-
-            # update index for next iteration
-            index += 1
+                self.cost_matrix[(n2.id, n1.id)] = cost  # symmetric value
 
     def set_closest_neighboors(self, max_neighbors):
         """

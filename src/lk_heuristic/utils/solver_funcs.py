@@ -118,7 +118,7 @@ def solve(tsp_file=None, solution_method=None, runs=1, backtracking=(5, 5), redu
 
     # setup some information of the run
     best_tour = None  # the best tsp tour nodes found so far
-    best_cost = math.inf  # the best cost found so fat
+    best_cost = math.inf  # the best cost found so far
     mean_cost = 0  # the mean cost value of all runs
 
     # create the initial tsp instance

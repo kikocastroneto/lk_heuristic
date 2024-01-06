@@ -1,11 +1,11 @@
 class Edge:
     """
-    The edge class represent an edge in space. The edge is a connection between two nodes. The connection is simmetric, i.e, the Edge(AB) == Edge(BA). This simmetric property is implemented in initialization method.
+    The edge class represent an edge in space. The edge is a connection between two nodes. The connection is symmetric, i.e, the Edge(AB) == Edge(BA). This symmetric property is implemented in initialization method.
     """
 
     def __init__(self, n1, n2):
         """
-        Initialize an edge with its nodes. The node order (n1/n2) is switched based on node values to guarantee the simmetric property of TSP edges, i.e, {n1,n2} == {n2,n1}. By comparing the nodes, the order will always be the same, so is not necessary to check node ordering later.
+        Initialize an edge with its nodes. The node order (n1/n2) is switched based on node values to guarantee the symmetric property of TSP edges, i.e, {n1,n2} == {n2,n1}. By comparing the nodes, the order will always be the same, so is not necessary to check node ordering later.
 
         :param n1: the first node
         :type n1: Node
