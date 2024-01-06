@@ -5,7 +5,7 @@ from lk_heuristic.models.edge import Edge
 
 class Tour:
     """
-    The tour class represents a sequence of edges that starts at one node, visits all tour nodes and ends at same starting node (for 'cycle' tours) or not (for 'path' tours). The nodes will be a list of nodes in the ordering of visit, while edges is a set of edges (so ordering is not considered).
+    The tour class represents a sequence of edges that starts at one node, visits all tour nodes and ends at same starting node (for 'cycle' tours) or at last node (for 'path' tours). The nodes will be a list of nodes in the ordering of visit, while edges is a set of edges (so ordering is not considered).
     """
 
     def __init__(self, nodes, t="cycle"):
@@ -48,36 +48,29 @@ class Tour:
         if self.t == "path":
             self.nodes.append(NodePivot())
 
-        # loop through each node and set the tour properties
         for i in range(len(self.nodes)):
 
             # set node's successor node
             if (i == len(self.nodes) - 1):
-                self.nodes[i].succ = self.nodes[0]  # the successor of the last node is the first node
+                self.nodes[i].succ = self.nodes[0]
             else:
                 self.nodes[i].succ = self.nodes[i + 1]
 
             # set node's predecessor node
             self.nodes[i].pred = self.nodes[i - 1]
 
-            # set node position
             self.nodes[i].pos = i
-
-            # set node id
             self.nodes[i].id = i
 
     def set_edges(self):
         """
-        Generate the tour edges using current tour nodes
+        Update tour edges using current tour nodes
         """
 
-        # initialize the set of edges
         tour_edges = set()
 
-        # initialize the first node
         curr_node = self.nodes[0]
 
-        # loop through each node and add the edge of current node and its neighbor
         while(curr_node.succ != self.nodes[0]):
             tour_edges.add(Edge(curr_node, curr_node.succ))
             curr_node = curr_node.succ
@@ -85,53 +78,45 @@ class Tour:
         # add the closing edge
         tour_edges.add(Edge(curr_node, curr_node.succ))
 
-        # populate the edges
         self.edges = tour_edges
 
     def set_cost(self, cost_matrix):
         """
-        Set the tour cost by summing all tour edge costs from a cost matrix
+        Update tour cost by summing all tour edge costs from a cost matrix
 
         :param cost_matrix: the matrix with cost(i,j) between node id "i" and node id "j"
-        :type node: list
-
+        :type cost_matrix: list
         """
-        # initialize the cost
+
         tour_cost = 0
 
-        # initialize the first node
         curr_node = self.nodes[0]
 
-        # loop through each node and add the edge of current node and its neighbor
         while(curr_node.succ != self.nodes[0]):
             tour_cost += cost_matrix[(curr_node.id, curr_node.succ.id)]
             curr_node = curr_node.succ
 
-        # add the cost of closing the loop (last node -> first node)
+        # add the cost of closing the loop
         tour_cost += cost_matrix[(curr_node.id, curr_node.succ.id)]
 
-        # assign the cost value
         self.cost = tour_cost
 
     def set_pos(self):
         """
-        Set the 'pos' attribute of the nodes from a feasible tour. This function is relevant after performing unfeasible swaps that only reorder nodes pred/succ attribute but leaves the pos attribute incorrect. After converging to a feasible tour, call this function to update the pos attribute.
+        Update 'pos' attribute of the nodes from a feasible tour. This function is relevant after performing unfeasible swaps that only reorder nodes pred/succ attribute but leaves the pos attribute incorrect. After converging to a feasible tour, this function is called to update the pos attribute.
         """
 
-        # initialization with first node
         curr_node = self.nodes[0]
         curr_node.pos = 0
 
-        # loop until all nodes have been seen
         while curr_node.succ != self.nodes[0]:
 
-            # update current node
             curr_node = curr_node.succ
             curr_node.pos = curr_node.pred.pos + 1
 
     def get_nodes(self, random_start=False, start_node=None):
         """
-        Get the nodes inside the tour sorted by their sequence and return the list of nodes
+        Get the nodes inside the tour sorted by their current sequence and return them in a list. The starting node can be a random choice or explicitly selected.
 
         :param random_start: boolean indicating if first tour node shall be a random node 
         :type random_start: bool
@@ -144,44 +129,34 @@ class Tour:
         # a set of nodes to check if all nodes were analyzed
         visited_nodes = set(self.nodes)
 
-        # start a list of sorted nodes
         tour_nodes = []
 
-        # get the starting node
-        # default to first node from node list
         curr_node = self.nodes[0]
 
         # if a starting node is defined, set as the current node
+        # if random_start is True, gets a random starting node
+        # if random_start is False at hamiltonian paths, gets the pivot node as starting node (so exported tsp has the first and last element as the open nodes)
         if start_node:
             curr_node = start_node
-
-        # if random_start is True, gets a random starting node
         elif random_start:
             curr_node = choice(self.nodes)
-
-        # if no random_start at hamiltonian paths, gets the pivot node as starting node (so exported tsp has the first and last element as the open nodes)
         elif self.t == "path":
             for node in self.nodes:
                 if type(node) == NodePivot:
                     curr_node = node
                     break
 
-        # initialization with first node
         visited_nodes.remove(curr_node)
 
         # loop until all nodes have been seen (this is necessary for unfeasible tours, like two separated subtours)
         while len(visited_nodes) > 0:
 
-            # loop through each tour node checking if it was not visited yet
             while curr_node.succ in visited_nodes:
 
-                # append the node index to list of indexes
                 tour_nodes.append(curr_node)
 
-                # update current node
                 curr_node = curr_node.succ
 
-                # remove current node from visited
                 visited_nodes.remove(curr_node)
 
             # append last index to close the tour
@@ -194,7 +169,6 @@ class Tour:
                 # get any unvisited node to continue the search
                 curr_node = visited_nodes.pop()
 
-        #  return the list of indexes
         return tour_nodes
 
     def shuffle(self):
@@ -202,48 +176,40 @@ class Tour:
         Shuffle the tour nodes creating a random tour and re-initializing the tour edges 
         """
 
-        # create indexes and shuffle them
         indexes = [i for i in range(self.size)]
         shuffle(indexes)
 
-        # initialize the current node
         curr_node = self.nodes[indexes[-1]]
 
-        # loop to change the predecessor, successor and position of each node
         for i in range(-1, self.size - 1):
             curr_node.succ = self.nodes[indexes[i + 1]]
             curr_node.pred = self.nodes[indexes[i - 1]]
             curr_node.pos = i + 1
             curr_node = curr_node.succ
 
-        # rebuild the edges after shuffling the nodes
+        # update the edges after shuffling the nodes
         self.set_edges()
 
     def restore(self, swaps=None):
         """
-        Restore an initial tour that passed through some 2-opt swaps by doing a certain amount of reversed swaps using the swap_stack. If number of swaps is not defined, the entire swap stack will be undone
+        Restore an initial tour that passed through some 2-opt swaps by doing a certain amount of reversed swaps from the swap_stack. If number of swaps is not defined, the entire swap stack will be undone. swap_stack is ordered such that undone swap are executed from last to first swap.
 
         :param swaps: the number of swaps to be undone
         :type swaps: int
         """
 
-        # if swaps are not defined, the entire swap stack will be undone
         if swaps == None:
             swaps = len(self.swap_stack)
 
-        # looping until number of swaps are reached
         for _ in range(swaps):
 
-            # get last stack
             curr_stack = self.swap_stack[-1]
 
-            # collect node values
             t1 = curr_stack[0]
             t2 = curr_stack[1]
             t3 = curr_stack[2]
             t4 = curr_stack[3]
 
-            # collect the 2-Opt swap type made
             swap_type = curr_stack[-1]
 
             # execute the reversed swap based on the swap operation
@@ -259,10 +225,9 @@ class Tour:
             elif (swap_type == "swap_feasible_reversed"):
                 self.swap_feasible(t4, t1, t2, t3, True, False)
 
-            # remove last swap
             self.swap_stack.pop()
 
-        # loop through each applied swap and check if there's any swap that don't recompute the pos attribute. If so, set the pos attribute
+        # if there's any swap that do not recompute the pos attribute, set_pos is called
         for swap in self.swap_stack:
             if swap[-1] != "swap_feasible":
                 self.set_pos()
@@ -281,34 +246,28 @@ class Tour:
         :type between_node: Node
         :param to_node: the ending node
         :type to_node: Node
+        :param use_pos_attr: a boolean indicating if search is using the pos attribute or not
+        :type use_pos_attr: bool
         """
 
-        # using pos attribute
         if use_pos_attr:
-
-            # this is the check where the segment from-to does not contain the breaking pos value
             if from_node.pos <= to_node.pos:
-                # segment does not pass through the breaking pos value
                 return from_node.pos < between_node.pos and between_node.pos < to_node.pos
             else:
-                # segment passes through the breaking pos value
+                # condition when pos passes through last pos value
                 return from_node.pos < between_node.pos or between_node.pos < to_node.pos
 
         # using pred/succ attribute
         else:
 
-            # get starting node
             node = from_node.succ
 
-            # looping until to node is reached
             while node != to_node:
-                # if between node is reached, return true
                 if node == between_node:
                     return True
                 else:
                     node = node.succ
 
-            # if between node was not found, returns false
             return False
 
     def is_swap_feasible(self, t1, t2, t3, t4):
@@ -327,7 +286,7 @@ class Tour:
         *1: all nodes must be different from each other;
         *2: the order of the nodes in the tour must be (t1,t2,t4,t3) in any direction (clockwise or counter clockwise). Notice that in the scheme above, if we had (t1,t2,t3,t4), the relink would result in 2 closed loops, which are unfeasible. Notice that if we switch t1 with t2 and t3 with t4, it still feasible, the change was only made in the direction.
 
-        * This function can be used into a subtour: when an unfeasible swap results in an unfeasible tour, there're two subtours that, isolated from each other, are valid subtours. This is relevant at the unfeasible search function (when node is between t1 and t4).
+        * This function can be used into a subtour: when an unfeasible swap results into an unfeasible tour, there are two subtours that, isolated from each other, are valid subtours. This is relevant at the unfeasible search function.
 
         :param t1: the tail node of the first broken edge
         :type t1: Node2D
@@ -345,8 +304,7 @@ class Tour:
         if not (t1 != t2 and t1 != t3 and t1 != t4 and t2 != t3 and t2 != t4 and t3 != t4):
             return False
 
-        # check t4 based on the orientation of the edge (t1,t2)
-        # for a feasible swap, t4 can be validated using t1 and t2 orientation (rule 2)
+        # check the order of nodes t1, t2, t3 and t4 (rule 2)
         if t1.succ == t2:
             if t4 != t3.pred:
                 return False
@@ -354,7 +312,6 @@ class Tour:
             if t4 != t3.succ:
                 return False
 
-        # return true if swap is feasible
         return True
 
     def is_swap_unfeasible(self, t1, t2, t3, t4):
@@ -386,12 +343,11 @@ class Tour:
         :rtype: boolean
         """
 
-        # for an unfeasilbe swap, all nodes must be different from each other (rule 1)
+        # for an unfeasible swap, all nodes must be different from each other (rule 1)
         if not (t1 != t2 and t1 != t3 and t1 != t4 and t2 != t3 and t2 != t4 and t3 != t4):
             return False
 
-        # check t4 based on the orientation of the edge (t1,t2)
-        # for an unfeasible swap, t4 can be validated using t1 and t2 orientation (rule 2)
+        # check the order of nodes t1, t2, t3 and t4 (rule 2)
         if t1.succ == t2:
             if t4 == t3.pred:
                 return False
@@ -403,7 +359,6 @@ class Tour:
         if (t2.pred == t3 or t2.succ == t3 or t1.pred == t4 or t1.succ == t4):
             return False
 
-        # return true if an unfeasible swap was found
         return True
 
     def is_swap_double_bridge(self, t1, t2, t3, t4, t5, t6, t7, t8):
@@ -486,7 +441,7 @@ class Tour:
           ()--()           ()   ()
           t2  t1           t2   t1
 
-        * This function can be used into a subtour: when an unfeasible swap results in an unfeasible tour, there're two subtours that, isolated from each other, are valid subtours. This is relevant at the unfeasible search function (when node is between t1 and t4). When this function is applied to subtours, the pos attribute must not be recomputed.
+        * This function can be used in a subtour: when an unfeasible swap results into an unfeasible tour, there are two subtours that, isolated from each other, are valid subtours. This is relevant at the unfeasible search function (when node is between t1 and t4). When this function is applied to subtours, the pos attribute must not be recomputed.
 
         :param t1: the tail node of the first broken edge
         :type t1: Node2D
@@ -637,7 +592,7 @@ class Tour:
 
     def swap_node_between_t2_t3(self, t1, t4, t5, t6, record=True):
         """
-        Execute a 2Opt-Swap operation from an unfeasible tour with node t5 (and thus also t6) located between nodes t2 and t3. The break of edge (t1,t4) opens one of the closed tour and  connecting t1-t6 and t4-t5 results into a new valid tour.
+        Execute a 2Opt-Swap operation from an unfeasible tour with node t5 (and thus also t6) located between nodes t2 and t3. The break of edge (t1,t4) opens one of the closed tour and connecting t1-t6 and t4-t5 results into a new valid tour.
 
         This function is written with reference nodes t5 and t6, but it works at any swap level if starting from an unfeasible tour. As an example, this function is used in LK algorithm to perform the swap of t7 (and thus also t8) between t2-t3.
 
@@ -653,20 +608,16 @@ class Tour:
         :type record: boolean
         """
 
-        # checking if t1-t4 is reversed (t4 = t1.pred) or not (t4 = t1.succ)
-        # this is required to check succ/pred sequences
+        # checking if t1-t4 is reversed 
         t4_after_t1 = t1.succ == t4
 
-        # checking if t5-t6 is reversed (t6 = t5.pred) or not (t6 = t5.succ)
-        # this is required to check succ/pred sequences
+        # checking if t5-t6 is reversed 
         t6_after_t5 = t5.succ == t6
 
         # a boolean checking if segment must be reversed
         # requires to reverse t5-t6 segment when (t1-t4-t5-t6) or (t4-t1-t6-t5)
-        # otherwise the tour (luckly) is in the correct sequence
         reverse_subtour = t4_after_t1 != t6_after_t5
 
-        # apply the reverse loop
         if (reverse_subtour):
 
             # arranging the nodes for the reorder loop (t5-t6 segment)
@@ -677,7 +628,6 @@ class Tour:
                 from_node = t5
                 to_node = t6
 
-            # loop reversing the segment
             while (from_node != to_node):
 
                 # reverse the node pred/succ attribute and update for next node
@@ -794,20 +744,14 @@ class Tour:
         :rtype: str
         """
 
-        # get the starting node
         curr_node = self.nodes[0]
 
-        # initialize the string
         node_seq = str(curr_node.id)
 
-        # loop until tour is closed
         while curr_node.succ != self.nodes[0]:
 
-            # get next node
             curr_node = curr_node.succ
 
-            # update the string
             node_seq += f",{curr_node.id}"
 
-        # return the string sequence
         return f"({node_seq})"

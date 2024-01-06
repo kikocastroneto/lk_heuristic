@@ -1,6 +1,6 @@
 class Node:
     """
-    The node class represent a node in TSP problem. It is implemented as a doubly linked list, where each node has its predecessor and successor node defined.
+    The node class represent a node in space. It is implemented as a doubly linked list, where each node has its predecessor and successor node defined.
     """
 
     def __init__(self):
@@ -11,7 +11,7 @@ class Node:
         self.id = -1
 
         # the position (index) of the node in a tour (to be update when initializing the tour)
-        # the position can be either a positive or negative number, but is must be incremented by 1
+        # the position can be either a positive or negative number, but is must be incremented or decremented by 1
         self.pos = -1
 
         # the predecessor and successor nodes at a tour (to be update when initializing the tour)
@@ -20,14 +20,13 @@ class Node:
 
     def __eq__(self, other):
         """
-        Equal comparison method between two nodes, which will be true when node ids are equal.
+        Equal comparison method between two nodes.
 
         :param other: other node of comparison
         :type other: Node
         :return: a boolean indicating if both nodes are equal
         :rtype: boolean
         """
-        # check if other node is not None
         if (other):
             return (self.id == other.id)
         else:
@@ -46,7 +45,10 @@ class Node:
 
     def __hash__(self):
         """
-        Hashing Node object is required to allow comparison of Edge, which are elements made of Nodes. The hash is performed in the id value.
+        Hashing Node object is required to allow comparison of Edge, which are elements made of Nodes.
+
+        :return: the hash value
+        :rtype: int
         """
         return hash(self.id)
 
@@ -84,10 +86,8 @@ class Node2D(Node):
         :type y: float
         """
 
-        # initialize the super class
         super().__init__()
 
-        # initialize the node values
         self.x = x
         self.y = y
 
@@ -127,10 +127,8 @@ class Node3D(Node):
         :type z: float
         """
 
-        # initialize the super class
         super().__init__()
 
-        # initialize the node values
         self.x = x
         self.y = y
         self.z = z

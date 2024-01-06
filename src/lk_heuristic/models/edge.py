@@ -1,6 +1,6 @@
 class Edge:
     """
-    The edge class represent an edge in space. The edge is a connection between two nodes. The connection is symmetric, i.e, the Edge(AB) == Edge(BA). This symmetric property is implemented in initialization method.
+    The edge class represent an edge in space. The edge is a connection between two nodes. The connection is symmetric, i.e, Edge(AB) == Edge(BA). This symmetric property is implemented in initialization method.
     """
 
     def __init__(self, n1, n2):
@@ -13,13 +13,12 @@ class Edge:
         :type n2: Node
         """
 
-        # asserting that a valid edge can't connect to same node
+        # a valid edge can't connect to same node
         assert(n1 != n2)
 
         if n1 < n2:
             self.n1 = n1
             self.n2 = n2
-        # switch the ordering
         else:
             self.n1 = n2
             self.n2 = n1
@@ -37,7 +36,10 @@ class Edge:
 
     def __hash__(self):
         """
-        Hashing Edge object is required to allow building sets of edges, which are "fast" objects used in LK joined and broken edges sets. The hash is performed in the tuple of node 1 and node 2 id values.
+        Hashing Edge object is required to allow building sets of edges, which are "fast" objects used in LK joined and broken edges sets.
+
+        :return: the hash value
+        :rtype: int
         """
         return hash((self.n1.id, self.n2.id))
 

@@ -14,7 +14,7 @@ solutions_dir = os.path.abspath(os.path.join(file_dir, "../", "solutions"))
 
 def get_interactive_inputs():
     """
-    Execute the interactive shell with user inputs to get a selection for the tsp file (from 'samples' directory) and a selection of a solution method (a list of avaliable methods at Tsp class)
+    Execute the interactive shell with user inputs to get a selection for the tsp file (from 'samples' directory) and a selection of a solution method (a list of available methods at Tsp class)
 
     :return: a tuple with the tsp file and the solution method selected by the user
     :rtype: tuple
@@ -29,7 +29,7 @@ def get_interactive_inputs():
 
     # loop to collect files in selected directory
     print("# Step 1 - TSP Instance Selection #")
-    print(f"*TSP instances avaliable in '{os.path.basename(samples_dir)}' directory:")
+    print(f"*TSP instances available in '{os.path.basename(samples_dir)}' directory:")
     f_index = 0
     for f in os.listdir(samples_dir):
         if f.lower().endswith(".tsp"):
@@ -52,12 +52,12 @@ def get_interactive_inputs():
     # Step 2 - Select solution method #
     ###################################
 
-    # get the solution methods avaliable at Tsp class
+    # get the solution methods available at Tsp class
     solution_methods = Tsp.get_solution_methods()
 
-    # loop to display avaliable solution methods
+    # loop to display available solution methods
     print("# Step 2 - TSP Solution Methods #")
-    print("*TSP solution methods avaliable in tsp.py:")
+    print("*TSP solution methods available in tsp.py:")
     for i, solution_method in enumerate(solution_methods):
         print(f"[{i}] - {solution_method.__name__}")
 
@@ -154,7 +154,7 @@ def solve(tsp_file=None, solution_method=None, runs=1, backtracking=(5, 5), redu
 
     # setup export name as "tspname_cost.tsp"
     tsp_full_name = os.path.basename(tsp_file)
-    tsp_name, tsp_ext = os.path.splitext(tsp_full_name)
+    tsp_name, _ = os.path.splitext(tsp_full_name)
     export_file = os.path.join(solutions_dir, f"{tsp_name}_{best_cost:.3f}.tsp")
 
     # if a file name is supplied, the export file is overwritten

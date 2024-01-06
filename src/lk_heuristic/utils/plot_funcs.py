@@ -17,8 +17,7 @@ def plot_tsp_2d(tsp_file, tour_type="cycle"):
     :type tour_type: str
     """
 
-    # get the file name and extension
-    file_name, file_ext = os.path.splitext(os.path.basename(tsp_file))
+    file_name, _ = os.path.splitext(os.path.basename(tsp_file))
 
     # import the tsp file
     tsp_header, nodes = import_tsp_file(tsp_file)
@@ -39,12 +38,12 @@ def plot_tsp_2d(tsp_file, tour_type="cycle"):
     fig.update_xaxes(showgrid=False, zeroline=False, showticklabels=False)
     fig.update_yaxes(showgrid=False, zeroline=False, showticklabels=False)
 
-    # lists to colect the plotting data in 2D
+    # lists to collect the plotting data in 2D
     x_coords = []
     y_coords = []
 
-    # loop through each tour node
     for node in nodes:
+
         # append the x and y coords
         x_coords.append(node.x)
         y_coords.append(node.y)
@@ -87,8 +86,7 @@ def plot_tsp_3d(tsp_file, tour_type="cycle"):
     :type tour_type: str
     """
 
-    # get the file name and extension
-    file_name, file_ext = os.path.splitext(os.path.basename(tsp_file))
+    file_name, _ = os.path.splitext(os.path.basename(tsp_file))
 
     # import the tsp file
     tsp_header, nodes = import_tsp_file(tsp_file)
@@ -120,8 +118,8 @@ def plot_tsp_3d(tsp_file, tour_type="cycle"):
     y_coords = []
     z_coords = []
 
-    # loop through each tour node
     for node in nodes:
+
         # append the x, y and z coords
         x_coords.append(node.x)
         y_coords.append(node.y)
